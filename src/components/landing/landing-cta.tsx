@@ -58,12 +58,18 @@ export function LandingCta({
 
       <footer className="mx-auto mt-14 flex max-w-6xl flex-wrap items-center justify-between gap-3 px-1 text-xs text-muted">
         <KeepSolvedLogo size="sm" />
-        <div className="flex gap-5">
+        <div className="flex flex-wrap gap-5">
           <Link href="/try" className="transition hover:text-foreground">
             Try
           </Link>
           <Link href="/status" className="transition hover:text-foreground">
             Status
+          </Link>
+          <Link href="/privacy" className="transition hover:text-foreground">
+            Privacy
+          </Link>
+          <Link href="/terms" className="transition hover:text-foreground">
+            Terms
           </Link>
           <Link href="/login" className="transition hover:text-foreground">
             Sign in

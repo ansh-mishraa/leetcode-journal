@@ -15,12 +15,26 @@ type Props = { params: Promise<{ username: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username } = await params;
+  const title = `@${username}`;
+  const description = `Coding trajectory and mastery curve for @${username} on KeepSolved`;
+  const og = absoluteUrl(`/u/${username}/opengraph-image`);
   return {
-    title: `@${username}`,
-    description: `Coding trajectory and mastery curve for @${username}`,
+    title,
+    description,
     openGraph: {
-      title: `@${username} · KeepSolved`,
-      images: [{ url: absoluteUrl(`/u/${username}/opengraph-image`) }],
+      title: `${title} · KeepSolved`,
+      description,
+      url: absoluteUrl(`/u/${username}`),
+      images: [{ url: og, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} · KeepSolved`,
+      description,
+      images: [og],
+    },
+    alternates: {
+      canonical: absoluteUrl(`/u/${username}`),
     },
   };
 }

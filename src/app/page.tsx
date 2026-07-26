@@ -8,7 +8,9 @@ import { LandingModes } from "@/components/landing/landing-modes";
 import { LandingCta } from "@/components/landing/landing-cta";
 import { Reveal } from "@/components/ui/reveal";
 import { Button } from "@/components/ui/button";
+import { BRAND } from "@/lib/brand";
 import { getSession } from "@/lib/session";
+import { absoluteUrl } from "@/lib/utils";
 
 export default async function HomePage() {
   const session = await getSession();
@@ -17,8 +19,27 @@ export default async function HomePage() {
     ? "Open Recall Engine"
     : "Try a problem — no signup";
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: BRAND.name,
+    applicationCategory: "EducationalApplication",
+    operatingSystem: "Web",
+    description: BRAND.shortPitch,
+    url: absoluteUrl("/"),
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+    },
+  };
+
   return (
     <AppShell marketing fullBleed>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Hero — one composition, brand + thesis + Trajectory */}
       <section className="relative min-h-[100svh] overflow-hidden">
         <LandingAtmosphere />

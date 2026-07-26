@@ -27,6 +27,7 @@
   --foreground: var(--chalk);
   --card: var(--ink-raised);
   --muted: var(--graphite);
+  --placeholder: color-mix(in srgb, var(--graphite) 78%, transparent);
   --border: var(--rule);
   --ring: var(--band-expert);
   --destructive: var(--band-grandmaster);
@@ -61,6 +62,7 @@
   --foreground: var(--chalk);
   --card: var(--ink-raised);
   --muted: var(--graphite);
+  --placeholder: color-mix(in srgb, var(--graphite) 88%, transparent);
   --border: var(--rule);
   --ring: var(--band-expert);
   --destructive: var(--band-grandmaster);
@@ -126,6 +128,12 @@
   .font-display {
     font-family: var(--font-display), system-ui, sans-serif;
     letter-spacing: -0.035em;
+  }
+
+  /* Placeholders read as a hint, never as entered text */
+  ::placeholder {
+    color: var(--placeholder);
+    opacity: 1; /* Firefox dims placeholders by default */
   }
 
   :focus-visible {

@@ -33,6 +33,8 @@ Open [http://localhost:3000](http://localhost:3000).
 
 Full vendor setup (Vercel, Trigger, Upstash, OAuth): see [DEPLOY.md](./DEPLOY.md).
 
+Launch copy + Product Hunt / X / Reddit checklist: see [LAUNCH.md](./LAUNCH.md).
+
 ## Product map
 
 - `/` — landing

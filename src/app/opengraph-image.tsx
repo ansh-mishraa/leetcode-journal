@@ -33,21 +33,20 @@ export default function OpenGraphImage() {
               border: "1px solid rgba(255,255,255,0.08)",
             }}
           >
-            <svg width="40" height="40" viewBox="0 0 40 40">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
               <path
-                d="M28.5 14.5c2.8 2.2 3.6 5.8 1.8 8.8"
+                d="M27 11.2A11 11 0 1 0 27 28.8"
                 stroke="#3B82F6"
-                strokeWidth="2.6"
+                strokeWidth="3"
                 strokeLinecap="round"
-                fill="none"
               />
+              <circle cx="27" cy="11.2" r="2" fill="#F59E0B" />
               <path
-                d="M12 20.2l5.1 5.1L28 13.8"
-                stroke="#F4F3F1"
-                strokeWidth="3.2"
+                d="M13.2 20.6l5 5L30.2 13.2"
+                stroke="#ECEEF2"
+                strokeWidth="3.1"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                fill="none"
               />
             </svg>
           </div>

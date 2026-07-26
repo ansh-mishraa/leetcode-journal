@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { ArrowRight, Brain, Flame, Link2, NotebookPen, Target } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { ProfileView } from "@/components/profile-view";
@@ -73,12 +72,9 @@ export default async function DashboardPage() {
                 Claim @username
               </Button>
             ) : (
-              <Link
-                href={`/u/${session.user.username}`}
-                className="font-data text-sm text-muted transition hover:text-foreground"
-              >
-                /u/{session.user.username} →
-              </Link>
+              <Button href={`/u/${session.user.username}`} variant="secondary">
+                Share card
+              </Button>
             )}
           </div>
         }
