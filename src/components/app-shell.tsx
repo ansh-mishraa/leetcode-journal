@@ -11,6 +11,7 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CommandPalette } from "@/components/command-palette";
+import { KeepSolvedLogo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 
 const appLinks = [
@@ -34,7 +35,6 @@ export async function AppShell({
   children: React.ReactNode;
   active?: string;
   marketing?: boolean;
-  /** Landing-only: no max-width / padding on main */
   fullBleed?: boolean;
 }) {
   const session = await getSession();
@@ -62,9 +62,10 @@ export async function AppShell({
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4">
           <Link
             href="/"
-            className="font-display text-lg tracking-tight transition-opacity hover:opacity-80"
+            className="transition-opacity hover:opacity-80"
+            aria-label="KeepSolved home"
           >
-            LeetCode Journal
+            <KeepSolvedLogo size="sm" />
           </Link>
 
           {session && !marketing ? (
@@ -167,9 +168,7 @@ export async function AppShell({
       <main
         className={cn(
           "w-full flex-1",
-          fullBleed
-            ? "max-w-none px-0 py-0"
-            : "mx-auto max-w-7xl px-4 py-8",
+          fullBleed ? "max-w-none px-0 py-0" : "mx-auto max-w-7xl px-4 py-8",
           session && !marketing && "pb-mobile-nav md:pb-8",
         )}
       >

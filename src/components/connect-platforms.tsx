@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Check, Copy, Loader2, Unlink } from "lucide-react";
+import { Check, Copy, Link2, Loader2, Unlink } from "lucide-react";
 import {
   PLATFORMS,
   CONNECTABLE_PLATFORMS,
@@ -13,6 +13,7 @@ import {
   verifyPlatformAction,
 } from "@/app/actions/platforms";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 
 type AccountRow = {
@@ -33,6 +34,7 @@ export function ConnectPlatforms({ accounts }: { accounts: AccountRow[] }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [copied, setCopied] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const byPlatform = useMemo(() => {
     const m = new Map<PlatformId, AccountRow>();
@@ -51,7 +53,7 @@ export function ConnectPlatforms({ accounts }: { accounts: AccountRow[] }) {
         return;
       }
       setMessage(
-        `Connected @${res.account.handle}. Copy the token below into your ${PLATFORMS[platform].verificationField}, save on that site, then hit Verify.`,
+        `Connected @${res.account.handle}. Copy the token below into your ${PLATFORMS[platform].verificationField}, save it on that site, then hit Verify.`,
       );
       setHandle("");
     });
@@ -60,8 +62,10 @@ export function ConnectPlatforms({ accounts }: { accounts: AccountRow[] }) {
   function onVerify(id: string) {
     setError(null);
     setMessage(null);
+    setBusyId(id);
     startTransition(async () => {
       const res = await verifyPlatformAction(id);
+      setBusyId(null);
       if (!res.ok) setError(res.error);
       else
         setMessage(
@@ -71,8 +75,10 @@ export function ConnectPlatforms({ accounts }: { accounts: AccountRow[] }) {
   }
 
   function onDisconnect(id: string) {
+    setBusyId(id);
     startTransition(async () => {
       await disconnectPlatformAction(id);
+      setBusyId(null);
       setMessage("Disconnected.");
     });
   }
@@ -85,51 +91,70 @@ export function ConnectPlatforms({ accounts }: { accounts: AccountRow[] }) {
 
   return (
     <div className="space-y-8">
-      <form
-        onSubmit={onConnect}
-        className="glass-panel rounded-2xl p-5 md:p-6"
-      >
+      <form onSubmit={onConnect} className="glass-panel rounded-2xl p-5 md:p-6">
         <h2 className="font-display text-xl tracking-tight">
           Connect a platform
         </h2>
         <p className="mt-1 text-sm text-muted">
           Stats sync immediately. Verification unlocks your public card.
         </p>
-        <div className="mt-5 grid gap-3 md:grid-cols-[180px_1fr_auto]">
-          <select
-            value={platform}
-            onChange={(e) => setPlatform(e.target.value as PlatformId)}
-            className="field"
-          >
-            {CONNECTABLE_PLATFORMS.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label}
-              </option>
-            ))}
-          </select>
-          <input
-            value={handle}
-            onChange={(e) => setHandle(e.target.value)}
-            placeholder="username or profile URL"
-            className="field font-data"
-            required
-          />
-          <Button type="submit" disabled={pending} className="md:min-w-[120px]">
-            {pending ? <Loader2 className="size-4 animate-spin" /> : null}
+
+        <div className="mt-5 grid gap-3 md:grid-cols-[190px_1fr_auto]">
+          <div>
+            <label htmlFor="platform" className="sr-only">
+              Platform
+            </label>
+            <select
+              id="platform"
+              value={platform}
+              onChange={(e) => setPlatform(e.target.value as PlatformId)}
+              className="field cursor-pointer"
+            >
+              {CONNECTABLE_PLATFORMS.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="handle" className="sr-only">
+              Username or profile URL
+            </label>
+            <input
+              id="handle"
+              value={handle}
+              onChange={(e) => setHandle(e.target.value)}
+              placeholder="username or profile URL"
+              className="field font-data"
+              required
+            />
+          </div>
+          <Button type="submit" disabled={pending} className="md:min-w-[130px]">
+            {pending && !busyId ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : (
+              <Link2 className="size-4" aria-hidden />
+            )}
             Connect
           </Button>
         </div>
+
         <p className="mt-3 text-xs leading-relaxed text-muted">
           {PLATFORMS[platform].verificationHint}
         </p>
+
         {error ? (
-          <p className="mt-3 text-sm text-destructive" role="alert">
+          <p
+            className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            role="alert"
+          >
             {error}
           </p>
         ) : null}
         {message ? (
           <p
-            className="mt-3 rounded-xl bg-band-pupil/10 px-3 py-2 text-sm text-band-pupil"
+            className="mt-4 rounded-xl border border-band-pupil/25 bg-band-pupil/10 px-3 py-2 text-sm text-band-pupil"
             role="status"
           >
             {message}
@@ -139,15 +164,17 @@ export function ConnectPlatforms({ accounts }: { accounts: AccountRow[] }) {
 
       <div className="space-y-3">
         <h2 className="font-display text-xl tracking-tight">Your platforms</h2>
+
         {accounts.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border px-6 py-10 text-center">
-            <p className="text-sm text-muted">
-              Nothing connected yet. Start with LeetCode or Codeforces.
-            </p>
-          </div>
+          <EmptyState
+            icon={Link2}
+            title="Nothing connected yet"
+            description="Start with LeetCode or Codeforces — public stats appear within seconds of connecting."
+          />
         ) : (
           accounts.map((a) => {
             const meta = PLATFORMS[a.platform];
+            const isBusy = busyId === a.id;
             return (
               <div
                 key={a.id}
@@ -162,44 +189,58 @@ export function ConnectPlatforms({ accounts }: { accounts: AccountRow[] }) {
                     <StatusPill status={a.status} />
                   </div>
                   <p className="mt-1.5 font-data text-sm">@{a.handle}</p>
+
                   {a.syncError ? (
-                    <p className="mt-1 text-xs text-destructive">{a.syncError}</p>
+                    <p className="mt-1.5 text-xs text-destructive">
+                      {a.syncError}
+                    </p>
                   ) : a.lastSyncedAt ? (
-                    <p className="mt-1 font-data text-xs text-muted">
+                    <p className="mt-1.5 font-data text-xs text-muted">
                       Synced {new Date(a.lastSyncedAt).toLocaleString()}
                     </p>
                   ) : null}
+
                   {a.status !== "VERIFIED" && a.verificationToken ? (
-                    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-ink-sunken p-2.5">
-                      <code className="font-data text-xs">
-                        {a.verificationToken}
-                      </code>
-                      <button
-                        type="button"
-                        onClick={() => copyToken(a.verificationToken!)}
-                        className="inline-flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted transition hover:bg-card hover:text-foreground"
-                      >
-                        {copied === a.verificationToken ? (
-                          <Check className="size-3.5 text-band-pupil" />
-                        ) : (
-                          <Copy className="size-3.5" />
-                        )}
-                        Copy
-                      </button>
-                      <span className="text-xs text-muted">
-                        → {meta.verificationField}
-                      </span>
+                    <div className="mt-3 rounded-xl border border-border bg-ink-sunken p-3">
+                      <p className="font-data text-[10px] uppercase tracking-wider text-muted">
+                        Paste into {meta.verificationField}
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <code className="rounded-lg bg-card px-2 py-1 font-data text-xs">
+                          {a.verificationToken}
+                        </code>
+                        <button
+                          type="button"
+                          onClick={() => copyToken(a.verificationToken!)}
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted transition hover:bg-card hover:text-foreground"
+                        >
+                          {copied === a.verificationToken ? (
+                            <>
+                              <Check className="size-3.5 text-band-pupil" />
+                              Copied
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="size-3.5" />
+                              Copy token
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   ) : null}
                 </div>
+
                 <div className="flex shrink-0 items-center gap-2">
                   {a.status !== "VERIFIED" ? (
                     <Button
                       type="button"
                       disabled={pending}
                       onClick={() => onVerify(a.id)}
-                      className="h-9 px-4"
                     >
+                      {isBusy ? (
+                        <Loader2 className="size-4 animate-spin" aria-hidden />
+                      ) : null}
                       Verify
                     </Button>
                   ) : null}
@@ -207,10 +248,10 @@ export function ConnectPlatforms({ accounts }: { accounts: AccountRow[] }) {
                     type="button"
                     disabled={pending}
                     onClick={() => onDisconnect(a.id)}
-                    className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-full border border-border px-3 text-sm text-muted transition hover:text-destructive"
+                    className="inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full border border-border px-3.5 text-sm text-muted transition hover:border-destructive/40 hover:text-destructive disabled:opacity-50"
                     aria-label={`Disconnect ${meta.label}`}
                   >
-                    <Unlink className="size-3.5" />
+                    <Unlink className="size-3.5" aria-hidden />
                     Remove
                   </button>
                 </div>
@@ -220,9 +261,9 @@ export function ConnectPlatforms({ accounts }: { accounts: AccountRow[] }) {
         )}
 
         {!byPlatform.has("GITHUB") ? (
-          <p className="text-sm text-muted">
-            Tip: Sign in with GitHub OAuth to link GitHub automatically — no
-            token needed.
+          <p className="rounded-xl border border-border bg-ink-sunken px-4 py-3 text-sm text-muted">
+            Shortcut: sign in with GitHub and we link that account automatically
+            — no token needed.
           </p>
         ) : null}
       </div>
@@ -231,6 +272,12 @@ export function ConnectPlatforms({ accounts }: { accounts: AccountRow[] }) {
 }
 
 function StatusPill({ status }: { status: string }) {
+  const label =
+    status === "VERIFIED"
+      ? "Verified"
+      : status === "FAILED"
+        ? "Failed"
+        : "Unverified";
   return (
     <span
       className={cn(
@@ -240,7 +287,7 @@ function StatusPill({ status }: { status: string }) {
         status === "FAILED" && "bg-destructive/15 text-destructive",
       )}
     >
-      {status}
+      {label}
     </span>
   );
 }

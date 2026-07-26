@@ -1,6 +1,8 @@
-# LeetCode Journal
+# KeepSolved
 
-Verified multi-platform coding profile + problem journal (notes, Excalidraw, FSRS spaced repetition).
+Keep what you solve. Pattern triggers, graded recall drills, and a mastery curve so you still know it on interview day.
+
+Formerly prototyped as “LeetCode Journal.”
 
 ## Stack
 

@@ -1,8 +1,15 @@
-# Design System — LeetCode Journal (Master)
+# Design System — KeepSolved (Master)
 
-> Persisted from ui-ux-pro-max, then **overridden** for product specificity.
-> Tool suggested teal light + Inter + Portfolio Grid — rejected as generic.
+> Formerly LeetCode Journal. Brand: **KeepSolved** — solved stays solved.
 > Source of truth: Codeforces rating spectrum as the only chroma.
+
+## Brand
+
+- **Name:** KeepSolved
+- **Tagline:** Solve it once. Still know it on interview day.
+- **Mark:** Check kept inside a return arc (retention / spaced revisit)
+- **Wordmark:** Keep (chalk) + Solved (spectrum gradient)
+- **Assets:** `public/brand/mark.png`, `public/brand/lockup.png`, `src/components/brand/logo.tsx`
 
 ## Product
 

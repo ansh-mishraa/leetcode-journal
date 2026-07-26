@@ -3,14 +3,18 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import { AuthLayout } from "@/components/auth/auth-layout";
+import { SocialAuthButtons } from "@/components/auth/social-auth-buttons";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/recall";
+  const callback = next.startsWith("/") ? next : "/recall";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -26,122 +30,105 @@ function LoginForm() {
       setError(err.message ?? "Sign in failed");
       return;
     }
-    router.push(next.startsWith("/") ? next : "/recall");
+    router.push(callback);
     router.refresh();
   }
 
-  const callback = next.startsWith("/") ? next : "/recall";
-
   return (
-    <>
-      <div className="glass-panel mt-8 rounded-2xl p-6 animate-float-in md:p-8">
+    <div className="animate-float-in">
+      <div className="mt-10 lg:mt-0">
         <p className="font-data text-[11px] uppercase tracking-[0.2em] text-muted">
           Welcome back
         </p>
-        <h1 className="mt-2 font-display text-3xl tracking-tight">Sign in</h1>
+        <h1 className="mt-2 font-display text-3xl tracking-tight md:text-4xl">
+          Sign in
+        </h1>
         <p className="mt-2 text-sm text-muted">
           Pick up your Recall queue, journal, and Trajectory.
         </p>
-
-        <form onSubmit={onSubmit} className="mt-6 space-y-3">
-          <label className="block text-sm">
-            <span className="mb-1.5 block text-muted">Email</span>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="field"
-              autoComplete="email"
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1.5 block text-muted">Password</span>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="field"
-              autoComplete="current-password"
-            />
-          </label>
-          {error ? (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Signing in…" : "Sign in"}
-            {!loading ? <ArrowRight className="size-4" aria-hidden /> : null}
-          </Button>
-        </form>
-
-        <div className="relative my-5 text-center">
-          <span className="bg-card px-3 font-data text-[10px] uppercase tracking-wider text-muted">
-            or
-          </span>
-          <div className="absolute inset-x-0 top-1/2 -z-10 h-px bg-border" />
-        </div>
-
-        <div className="grid gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            className="w-full"
-            onClick={() =>
-              authClient.signIn.social({
-                provider: "github",
-                callbackURL: callback,
-              })
-            }
-          >
-            Continue with GitHub
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            className="w-full"
-            onClick={() =>
-              authClient.signIn.social({
-                provider: "google",
-                callbackURL: callback,
-              })
-            }
-          >
-            Continue with Google
-          </Button>
-        </div>
       </div>
 
-      <p className="mt-6 text-center text-sm text-muted">
+      <div className="mt-8">
+        <SocialAuthButtons callbackURL={callback} />
+      </div>
+
+      <form onSubmit={onSubmit} className="mt-4 space-y-4">
+        <div>
+          <label htmlFor="email" className="mb-1.5 block text-sm text-muted">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="field"
+            autoComplete="email"
+          />
+        </div>
+        <div>
+          <label htmlFor="password" className="mb-1.5 block text-sm text-muted">
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="field"
+            autoComplete="current-password"
+          />
+        </div>
+        {error ? (
+          <p
+            className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            role="alert"
+          >
+            {error}
+          </p>
+        ) : null}
+        <Button
+          type="submit"
+          disabled={loading}
+          className="h-12 w-full justify-center text-base"
+        >
+          {loading ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+          ) : (
+            <ArrowRight className="size-4" aria-hidden />
+          )}
+          {loading ? "Signing in…" : "Sign in"}
+        </Button>
+      </form>
+
+      <p className="mt-8 text-center text-sm text-muted">
         No account?{" "}
         <Link
           href={`/signup${next !== "/recall" ? `?next=${encodeURIComponent(next)}` : ""}`}
-          className="text-foreground underline-offset-2 hover:underline"
+          className="text-foreground underline-offset-4 hover:underline"
         >
           Create one free
         </Link>
       </p>
-    </>
+    </div>
   );
 }
 
 export default function LoginPage() {
   return (
-    <div className="ambient-stage flex min-h-screen flex-col">
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-12">
-        <Link href="/" className="font-display text-xl tracking-tight">
-          LeetCode Journal
-        </Link>
-        <Suspense
-          fallback={
-            <div className="glass-panel mt-8 h-80 animate-pulse rounded-2xl" />
-          }
-        >
-          <LoginForm />
-        </Suspense>
-      </div>
-    </div>
+    <AuthLayout>
+      <Suspense
+        fallback={
+          <div className="mt-10 space-y-4">
+            <Skeleton className="h-10 w-40" />
+            <Skeleton className="h-64 w-full rounded-2xl" />
+          </div>
+        }
+      >
+        <LoginForm />
+      </Suspense>
+    </AuthLayout>
   );
 }

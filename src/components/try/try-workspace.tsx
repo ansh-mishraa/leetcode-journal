@@ -9,6 +9,8 @@ import {
   claimPreviewAction,
 } from "@/app/actions/journal";
 import { Button } from "@/components/ui/button";
+import { Badge, difficultyTone } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Preview = {
   id: string;
@@ -20,6 +22,7 @@ type Preview = {
 };
 
 const STORAGE_KEY = "lj-try-scratch";
+const SUGGESTIONS = ["two-sum", "valid-parentheses", "longest-substring-without-repeating-characters"];
 
 type Scratch = {
   titleSlug: string;
@@ -36,6 +39,7 @@ export function TryWorkspace({ signedIn }: { signedIn: boolean }) {
   const [pattern, setPattern] = useState("");
   const [trigger, setTrigger] = useState("");
   const [approach, setApproach] = useState("");
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const [pending, start] = useTransition();
 
   useEffect(() => {
@@ -48,7 +52,7 @@ export function TryWorkspace({ signedIn }: { signedIn: boolean }) {
       if (data.trigger) setTrigger(data.trigger);
       if (data.approach) setApproach(data.approach);
     } catch {
-      /* ignore */
+      /* ignore malformed scratch */
     }
   }, []);
 
@@ -71,11 +75,12 @@ export function TryWorkspace({ signedIn }: { signedIn: boolean }) {
       .filter(Boolean) as string[];
   }, [preview]);
 
-  function loadProblem(e: React.FormEvent) {
-    e.preventDefault();
+  function loadProblem(value: string) {
     setError(null);
+    setLoadingPreview(true);
     start(async () => {
-      const res = await previewProblemAction(url);
+      const res = await previewProblemAction(value);
+      setLoadingPreview(false);
       if (!res.ok) {
         setError(res.error);
         setPreview(null);
@@ -108,7 +113,7 @@ export function TryWorkspace({ signedIn }: { signedIn: boolean }) {
     });
   }
 
-  // Auto-claim when returning from signup with ?claim=
+  // Returning from signup with ?claim= — pull scratch into a real entry
   useEffect(() => {
     if (!signedIn || typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
@@ -137,141 +142,220 @@ export function TryWorkspace({ signedIn }: { signedIn: boolean }) {
 
   return (
     <div className="space-y-6">
-      <form
-        onSubmit={loadProblem}
-        className="glass-panel flex flex-col gap-3 rounded-2xl p-4 md:flex-row md:items-center md:p-5"
-      >
-        <input
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="Paste a LeetCode URL or slug — e.g. two-sum"
-          className="field flex-1 font-data"
-          required
-        />
-        <Button type="submit" disabled={pending}>
-          {pending ? <Loader2 className="size-4 animate-spin" /> : null}
-          Load problem
-        </Button>
-      </form>
+      <div className="glass-panel rounded-2xl p-4 md:p-5">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            loadProblem(url);
+          }}
+          className="flex flex-col gap-3 md:flex-row md:items-center"
+        >
+          <label htmlFor="try-url" className="sr-only">
+            LeetCode URL or slug
+          </label>
+          <input
+            id="try-url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="Paste a LeetCode URL or slug — e.g. two-sum"
+            className="field flex-1 font-data"
+            required
+          />
+          <Button type="submit" disabled={pending} className="shrink-0">
+            {pending ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : (
+              <ArrowRight className="size-4" aria-hidden />
+            )}
+            Load problem
+          </Button>
+        </form>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="font-data text-[10px] uppercase tracking-wider text-muted">
+            Try one
+          </span>
+          {SUGGESTIONS.map((s) => (
+            <button
+              key={s}
+              type="button"
+              disabled={pending}
+              onClick={() => {
+                setUrl(s);
+                loadProblem(s);
+              }}
+              className="chip font-data text-xs disabled:opacity-50"
+            >
+              {s.length > 24 ? `${s.slice(0, 24)}…` : s}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {error ? (
-        <p className="text-sm text-destructive" role="alert">
+        <p
+          className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          role="alert"
+        >
           {error}
         </p>
       ) : null}
 
-      {!preview ? (
-        <div className="rounded-2xl border border-dashed border-border px-6 py-14 text-center">
-          <Sparkles className="mx-auto size-6 text-band-expert" aria-hidden />
-          <h2 className="mt-4 font-display text-xl tracking-tight">
-            Feel the product in 30 seconds
-          </h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-            No account required. Load any problem, jot the pattern trigger, then
-            save when you want spaced repetition.
-          </p>
+      {loadingPreview ? (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Skeleton className="h-96 rounded-2xl" />
+          <Skeleton className="h-96 rounded-2xl" />
+        </div>
+      ) : !preview ? (
+        <div className="relative overflow-hidden rounded-3xl border border-dashed border-border px-6 py-16 text-center">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-40"
+            aria-hidden
+            style={{
+              background:
+                "radial-gradient(ellipse 45% 100% at 50% 0%, color-mix(in srgb, var(--band-expert) 14%, transparent), transparent 70%)",
+            }}
+          />
+          <div className="relative">
+            <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-band-expert/12 text-band-expert">
+              <Sparkles className="size-6" aria-hidden />
+            </div>
+            <h2 className="mt-5 font-display text-xl tracking-tight md:text-2xl">
+              Feel the loop in 30 seconds
+            </h2>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
+              Load any problem, write the signal that points to the pattern, and
+              save only when it clicks. Nothing is stored until you do.
+            </p>
+          </div>
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
-          <section className="glass-panel rounded-2xl p-5">
-            <p className="font-data text-xs text-muted">{preview.titleSlug}</p>
-            <h2 className="mt-1 font-display text-2xl tracking-tight">
-              {preview.title}
-            </h2>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {preview.difficulty ? (
-                <span className="rounded-full border border-border px-2 py-0.5 font-data text-xs">
-                  {preview.difficulty}
+          <section className="rounded-2xl border border-border bg-card">
+            <div className="border-b border-border px-5 py-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge tone={difficultyTone(preview.difficulty)}>
+                  {preview.difficulty ?? "unrated"}
+                </Badge>
+                <span className="font-data text-xs text-muted">
+                  {preview.titleSlug}
                 </span>
+              </div>
+              <h2 className="mt-2 font-display text-2xl tracking-tight">
+                {preview.title}
+              </h2>
+              {tags.length ? (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {tags.slice(0, 5).map((t) => (
+                    <span
+                      key={t}
+                      className="rounded-full border border-border px-2 py-0.5 font-data text-[10px] text-muted"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
               ) : null}
-              {tags.map((t) => (
-                <span
-                  key={t}
-                  className="rounded-full border border-border px-2 py-0.5 font-data text-xs text-muted"
-                >
-                  {t}
-                </span>
-              ))}
             </div>
             <div
-              className="prose prose-invert mt-4 max-h-[420px] max-w-none overflow-y-auto text-sm"
+              className="prose-problem max-h-[460px] overflow-y-auto px-5 py-4 text-sm leading-relaxed"
               dangerouslySetInnerHTML={{
-                __html:
-                  preview.contentHtml ?? "<p>No description available.</p>",
+                __html: preview.contentHtml ?? "<p>No description available.</p>",
               }}
             />
           </section>
 
           <section className="space-y-4">
-            <div className="glass-panel space-y-3 rounded-2xl p-5">
-              <h3 className="font-display text-lg tracking-tight">
-                Pattern trigger
-              </h3>
-              <p className="text-xs text-muted">
-                What signal in the constraints points to the pattern? This is the
-                skill interviews actually test.
-              </p>
-              <label className="block text-sm">
-                <span className="mb-1.5 block text-muted">Trigger</span>
+            <div className="glass-panel space-y-4 rounded-2xl p-5">
+              <div>
+                <h3 className="font-display text-lg tracking-tight">
+                  Pattern trigger
+                </h3>
+                <p className="mt-1 text-xs leading-relaxed text-muted">
+                  What signal in the constraints points to the pattern? This is
+                  the skill interviews actually test.
+                </p>
+              </div>
+              <div>
+                <label htmlFor="try-trigger" className="mb-1.5 block text-sm text-muted">
+                  Trigger
+                </label>
                 <input
+                  id="try-trigger"
                   value={trigger}
                   onChange={(e) => setTrigger(e.target.value)}
                   className="field"
-                  placeholder="e.g. sorted array + find a pair with target sum"
+                  placeholder="sorted array + find a pair with target sum"
                 />
-              </label>
-              <label className="block text-sm">
-                <span className="mb-1.5 block text-muted">Pattern</span>
+              </div>
+              <div>
+                <label htmlFor="try-pattern" className="mb-1.5 block text-sm text-muted">
+                  Pattern
+                </label>
                 <input
+                  id="try-pattern"
                   value={pattern}
                   onChange={(e) => setPattern(e.target.value)}
                   className="field"
-                  placeholder="e.g. two pointers"
+                  placeholder="two pointers"
                 />
-              </label>
-              <label className="block text-sm">
-                <span className="mb-1.5 block text-muted">Approach (short)</span>
+              </div>
+              <div>
+                <label htmlFor="try-approach" className="mb-1.5 block text-sm text-muted">
+                  Approach
+                </label>
                 <textarea
+                  id="try-approach"
                   value={approach}
                   onChange={(e) => setApproach(e.target.value)}
                   className="field h-auto min-h-[5rem] py-2.5"
                   placeholder="One or two sentences — not the full code"
                 />
-              </label>
+              </div>
             </div>
 
-            <div className="glass-panel rounded-2xl p-5">
-              <h3 className="font-display text-lg tracking-tight">
-                {signedIn ? "Save to your Recall Engine" : "Ready to keep this?"}
-              </h3>
-              <p className="mt-1 text-sm text-muted">
-                {signedIn
-                  ? "We'll schedule a review so you don't forget it in two weeks."
-                  : "Create a free account to schedule reviews and build your mastery curve."}
-              </p>
-              <Button
-                type="button"
-                className="mt-4 w-full"
-                disabled={pending}
-                onClick={saveForReal}
-              >
-                {pending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <ArrowRight className="size-4" aria-hidden />
-                )}
-                {signedIn ? "Save & schedule review" : "Save — create account"}
-              </Button>
-              {!signedIn ? (
-                <p className="mt-3 text-center text-xs text-muted">
-                  Already have an account?{" "}
-                  <Link
-                    href={`/login?next=${encodeURIComponent(`/try?claim=${preview.titleSlug}`)}`}
-                    className="text-foreground underline-offset-2 hover:underline"
-                  >
-                    Sign in
-                  </Link>
+            <div className="relative overflow-hidden rounded-2xl border border-border bg-ink-raised p-5">
+              <div
+                className="pointer-events-none absolute -right-6 -top-8 size-32 rounded-full blur-2xl"
+                aria-hidden
+                style={{
+                  background:
+                    "color-mix(in srgb, var(--band-pupil) 22%, transparent)",
+                }}
+              />
+              <div className="relative">
+                <h3 className="font-display text-lg tracking-tight">
+                  {signedIn ? "Save to your Recall Engine" : "Keep this one?"}
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted">
+                  {signedIn
+                    ? "We'll schedule the first review so this doesn't evaporate in two weeks."
+                    : "Create a free account and we'll carry this trigger straight into your journal."}
                 </p>
-              ) : null}
+                <Button
+                  type="button"
+                  className="mt-4 h-12 w-full justify-center text-base"
+                  disabled={pending}
+                  onClick={saveForReal}
+                >
+                  {pending ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                  ) : (
+                    <ArrowRight className="size-4" aria-hidden />
+                  )}
+                  {signedIn ? "Save & schedule review" : "Save — create account"}
+                </Button>
+                {!signedIn ? (
+                  <p className="mt-3 text-center text-xs text-muted">
+                    Already have an account?{" "}
+                    <Link
+                      href={`/login?next=${encodeURIComponent(`/try?claim=${preview.titleSlug}`)}`}
+                      className="text-foreground underline-offset-4 hover:underline"
+                    >
+                      Sign in
+                    </Link>
+                  </p>
+                ) : null}
+              </div>
             </div>
           </section>
         </div>

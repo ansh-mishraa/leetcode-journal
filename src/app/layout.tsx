@@ -27,11 +27,12 @@ const data = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "LeetCode Journal",
-    template: "%s · LeetCode Journal",
+    default: "KeepSolved",
+    template: "%s · KeepSolved",
   },
   description:
-    "Recall Engine for DSA — pattern triggers, graded reviews, and a mastery curve so you still know it on interview day.",
+    "Keep what you solve. Pattern triggers, graded recall drills, and a mastery curve so you still know it on interview day.",
+  applicationName: "KeepSolved",
 };
 
 export default function RootLayout({

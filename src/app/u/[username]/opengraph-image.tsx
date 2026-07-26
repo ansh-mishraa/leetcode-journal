@@ -28,7 +28,7 @@ export default async function OgImage({ params }: Props) {
             fontSize: 48,
           }}
         >
-          LeetCode Journal
+          KeepSolved
         </div>
       ),
       { ...size },
@@ -56,7 +56,7 @@ export default async function OgImage({ params }: Props) {
       >
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ fontSize: 28, color: "#8A8F98" }}>LeetCode Journal</div>
+            <div style={{ fontSize: 28, color: "#8A8F98" }}>KeepSolved</div>
             <div style={{ fontSize: 64, marginTop: 12 }}>@{username}</div>
           </div>
           <div

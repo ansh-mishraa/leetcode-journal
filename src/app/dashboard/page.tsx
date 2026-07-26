@@ -1,18 +1,17 @@
 import Link from "next/link";
-import { ArrowRight, Brain } from "lucide-react";
+import { ArrowRight, Brain, Flame, Link2, NotebookPen, Target } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { ProfileView } from "@/components/profile-view";
 import { RefreshButton } from "@/components/refresh-button";
 import { MasteryCurve } from "@/components/mastery-curve";
 import { PageHeader } from "@/components/ui/page-header";
 import { NextStepBanner } from "@/components/ui/next-step-banner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
 import { requireSession } from "@/lib/session";
 import { getAggregatedProfile } from "@/server/aggregation";
-import {
-  getMasteryCurve,
-  getMasterySummary,
-} from "@/server/journal/mastery";
+import { getMasteryCurve, getMasterySummary } from "@/server/journal/mastery";
 import { prisma } from "@/lib/db";
 
 export default async function DashboardPage() {
@@ -23,8 +22,6 @@ export default async function DashboardPage() {
     getMasterySummary(session.user.id),
     getMasteryCurve(session.user.id),
   ]);
-  const verifiedCount =
-    profile?.platforms.filter((p) => p.verified).length ?? 0;
   const platformCount = profile?.platforms.length ?? 0;
 
   const steps = [
@@ -39,7 +36,7 @@ export default async function DashboardPage() {
     {
       id: "recall",
       label: "Run a Recall session",
-      hint: "Grade Due Today when cards mature.",
+      hint: "Grade what's due so intervals adapt.",
       href: "/recall",
       done: summary.totalCards > 0 && summary.dueToday === 0,
       current: entryCount > 0 && summary.dueToday > 0,
@@ -47,7 +44,7 @@ export default async function DashboardPage() {
     {
       id: "connect",
       label: "Connect platforms (optional)",
-      hint: "Unlock Trajectory for your public card.",
+      hint: "Unlock the Trajectory on your public card.",
       href: "/dashboard/platforms",
       done: platformCount > 0,
       current: entryCount > 0 && platformCount === 0,
@@ -57,24 +54,22 @@ export default async function DashboardPage() {
   return (
     <AppShell active="/dashboard">
       <PageHeader
-        eyebrow="Profile · credibility"
+        eyebrow="Profile"
         title="Your Trajectory"
         description="Shareable proof of progress. Retention lives in Recall — this is the reward layer."
         action={
           <div className="flex flex-wrap items-center gap-2">
-            {summary.dueToday > 0 ? (
-              <Button href="/recall">
-                Due today ({summary.dueToday})
-                <ArrowRight className="size-4" aria-hidden />
-              </Button>
-            ) : (
-              <Button href="/recall" variant="secondary">
-                <Brain className="size-4" aria-hidden />
-                Recall Engine
-              </Button>
-            )}
+            <Button
+              href="/recall"
+              variant={summary.dueToday > 0 ? "primary" : "secondary"}
+            >
+              <Brain className="size-4" aria-hidden />
+              {summary.dueToday > 0
+                ? `Review ${summary.dueToday} due`
+                : "Recall Engine"}
+            </Button>
             {!session.user.username ? (
-              <Button href="/dashboard/settings" variant="secondary">
+              <Button href="/dashboard/settings" variant="ghost">
                 Claim @username
               </Button>
             ) : (
@@ -91,35 +86,59 @@ export default async function DashboardPage() {
 
       {steps.some((s) => !s.done) ? <NextStepBanner steps={steps} /> : null}
 
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Journal entries"
+          value={entryCount}
+          icon={NotebookPen}
+          accent="var(--band-pupil)"
+          href="/journal"
+          hint="Problems with your own notes"
+        />
+        <StatCard
+          label="Due today"
+          value={summary.dueToday}
+          icon={Brain}
+          accent="var(--band-expert)"
+          href="/recall"
+          hint="Cards waiting to be graded"
+        />
+        <StatCard
+          label="Retention"
+          value={summary.retentionScore}
+          icon={Target}
+          hint="Stability + accuracy composite"
+        />
+        <StatCard
+          label="Streak"
+          value={profile ? `${profile.streaks.current}d` : "—"}
+          icon={Flame}
+          accent="var(--band-master)"
+          hint={profile ? `Best ${profile.streaks.longest}d` : "Connect a platform"}
+        />
+      </div>
+
       <MasteryCurve points={mastery} className="mb-6" />
 
       {!profile || platformCount === 0 ? (
-        <div className="glass-panel rounded-2xl p-8 text-center md:p-12">
-          <h2 className="font-display text-2xl tracking-tight">
-            Trajectory unlocks with a platform
-          </h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-            Optional — connect LeetCode or Codeforces when you want a shareable
-            rating curve. You already get value from journal + Recall
-            {entryCount > 0 ? ` (${entryCount} entries)` : ""}.
-            {verifiedCount > 0 ? "" : ""}
-          </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Button href="/dashboard/platforms">
-              Connect a platform
-              <ArrowRight className="size-4" aria-hidden />
-            </Button>
-            <Button href="/try" variant="secondary">
-              Journal another problem
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <ProfileView
-          profile={profile}
-          isOwner
-          refreshSlot={<RefreshButton />}
+        <EmptyState
+          icon={Link2}
+          title="Trajectory unlocks with a platform"
+          description="Optional — connect LeetCode or Codeforces when you want a shareable rating curve. Journal and Recall already work without it."
+          actions={
+            <>
+              <Button href="/dashboard/platforms">
+                Connect a platform
+                <ArrowRight className="size-4" aria-hidden />
+              </Button>
+              <Button href="/try" variant="secondary">
+                Journal another problem
+              </Button>
+            </>
+          }
         />
+      ) : (
+        <ProfileView profile={profile} isOwner refreshSlot={<RefreshButton />} />
       )}
     </AppShell>
   );

@@ -1,5 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { KeepSolvedLogo } from "@/components/brand/logo";
 import { LandingAtmosphere } from "@/components/landing/landing-atmosphere";
 import { HeroTrajectory } from "@/components/landing/hero-trajectory";
 import { LandingFlow } from "@/components/landing/landing-flow";
@@ -24,9 +25,9 @@ export default async function HomePage() {
 
         <div className="relative mx-auto flex min-h-[100svh] max-w-6xl flex-col px-4 pb-10 pt-10 md:pb-14 md:pt-14">
           <div className="flex flex-1 flex-col justify-center">
-            <p className="hero-rise font-display text-2xl tracking-tight text-foreground md:text-3xl">
-              LeetCode Journal
-            </p>
+            <div className="hero-rise">
+              <KeepSolvedLogo size="lg" />
+            </div>
             <h1 className="hero-rise hero-rise-d1 mt-5 max-w-3xl font-display text-[2.6rem] leading-[0.98] tracking-tight md:text-6xl lg:text-[4.25rem]">
               Solve it once.{" "}
               <span className="bg-gradient-to-r from-band-pupil via-band-expert to-band-master bg-clip-text text-transparent">

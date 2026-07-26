@@ -12,10 +12,33 @@
 3. Deploy: `npx vercel --prod`
 4. Set `NEXT_PUBLIC_APP_URL` and `BETTER_AUTH_URL` to the production URL
 
-## 3. Better Auth
+## 3. Better Auth + Google login
 1. Generate `BETTER_AUTH_SECRET` (`openssl rand -base64 32`)
-2. Optional: create Google / GitHub OAuth apps
-3. Callback URL: `{APP_URL}/api/auth/callback/{provider}`
+2. Set `BETTER_AUTH_URL` and `NEXT_PUBLIC_APP_URL` to the same app origin (no trailing slash)
+
+### Google OAuth (recommended)
+1. Open [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials)
+2. Create **OAuth client ID** → Application type **Web application**
+3. Authorized JavaScript origins:
+   - `http://localhost:3000`
+   - `https://YOUR_DOMAIN`
+4. Authorized redirect URIs (exact match):
+   - `http://localhost:3000/api/auth/callback/google`
+   - `https://YOUR_DOMAIN/api/auth/callback/google`
+5. Copy Client ID + Client Secret into env:
+   ```
+   GOOGLE_CLIENT_ID=...
+   GOOGLE_CLIENT_SECRET=...
+   NEXT_PUBLIC_GOOGLE_AUTH=true
+   ```
+6. Restart `pnpm dev` — “Continue with Google” appears on `/login` and `/signup`
+
+### GitHub OAuth (optional)
+1. GitHub → Settings → Developer settings → OAuth Apps
+2. Callback: `{APP_URL}/api/auth/callback/github`
+3. Set `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `NEXT_PUBLIC_GITHUB_AUTH=true`
+
+Common failure: `redirect_uri_mismatch` → `BETTER_AUTH_URL` doesn’t match the URI registered in Google.
 
 ## 4. Upstash Redis
 1. Create database via Vercel Marketplace or upstash.com

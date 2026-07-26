@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import type { PlatformId } from "@/lib/platforms";
+import { cn } from "@/lib/utils";
 
 export default async function PlatformsPage() {
   const session = await requireSession();
@@ -12,43 +13,70 @@ export default async function PlatformsPage() {
     orderBy: { createdAt: "asc" },
   });
 
+  const hasAccounts = accounts.length > 0;
+  const hasVerified = accounts.some((a) => a.status === "VERIFIED");
+
+  const steps = [
+    {
+      title: "Connect",
+      body: "Paste a public username or profile URL.",
+      done: hasAccounts,
+      current: !hasAccounts,
+    },
+    {
+      title: "Paste token",
+      body: "Drop it into your bio, summary, or name field.",
+      done: hasVerified,
+      current: hasAccounts && !hasVerified,
+    },
+    {
+      title: "Verify",
+      body: "We read it once — then you can delete it.",
+      done: hasVerified,
+      current: false,
+    },
+  ];
+
   return (
     <AppShell active="/dashboard/platforms">
       <PageHeader
-        eyebrow="Step 1–2 · Platforms"
+        eyebrow="Optional · credibility"
         title="Connect & verify"
-        description="Enter a public handle, copy the token into the field we name, then verify. You can remove the token right after."
+        description="Public stats sync right away. Verification proves the handle is yours and unlocks your shareable card."
+        backHref="/dashboard"
+        backLabel="Dashboard"
       />
 
-      <div className="mb-8 grid gap-3 sm:grid-cols-3">
-        {[
-          {
-            t: "1. Connect",
-            d: "Paste username or profile URL",
-            active: true,
-          },
-          {
-            t: "2. Paste token",
-            d: "Into Summary / Name / Bio",
-            active: accounts.some((a) => a.status !== "VERIFIED"),
-          },
-          {
-            t: "3. Verify",
-            d: "We read it once — done",
-            active: accounts.some((a) => a.status === "VERIFIED"),
-          },
-        ].map((s) => (
-          <div
-            key={s.t}
-            className="rounded-xl border border-border bg-card px-4 py-3"
+      <ol className="mb-8 grid gap-3 sm:grid-cols-3">
+        {steps.map((s, i) => (
+          <li
+            key={s.title}
+            className={cn(
+              "relative overflow-hidden rounded-2xl border px-4 py-4",
+              s.current
+                ? "border-band-expert/40 bg-band-expert/[0.06]"
+                : "border-border bg-card",
+            )}
           >
-            <p className="font-data text-[11px] uppercase tracking-wider text-band-expert">
-              {s.t}
-            </p>
-            <p className="mt-1 text-sm text-muted">{s.d}</p>
-          </div>
+            <div className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "flex size-5 items-center justify-center rounded-full font-data text-[10px]",
+                  s.done
+                    ? "bg-band-pupil/20 text-band-pupil"
+                    : s.current
+                      ? "bg-band-expert/20 text-band-expert"
+                      : "bg-ink-sunken text-muted",
+                )}
+              >
+                {i + 1}
+              </span>
+              <p className="font-medium">{s.title}</p>
+            </div>
+            <p className="mt-1.5 text-sm text-muted">{s.body}</p>
+          </li>
         ))}
-      </div>
+      </ol>
 
       <ConnectPlatforms
         accounts={accounts.map((a) => ({

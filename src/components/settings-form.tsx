@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Check, Globe, Loader2, Lock } from "lucide-react";
 import { updateProfileAction } from "@/app/actions/platforms";
 import { Button } from "@/components/ui/button";
+
+const BIO_MAX = 200;
 
 export function SettingsForm({
   initial,
@@ -22,9 +25,11 @@ export function SettingsForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
+  const usernameValid = username === "" || /^[a-zA-Z0-9_-]+$/.test(username);
+
   return (
     <form
-      className="glass-panel space-y-4 rounded-2xl p-5 md:p-6"
+      className="space-y-5"
       onSubmit={(e) => {
         e.preventDefault();
         setMsg(null);
@@ -37,54 +42,151 @@ export function SettingsForm({
             isPublic,
           });
           if (!res.ok) setError(res.error);
-          else setMsg("Saved.");
+          else setMsg("Saved");
         });
       }}
     >
-      <label className="block text-sm">
-        <span className="mb-1.5 block text-muted">Display name</span>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="field"
-        />
-      </label>
-      <label className="block text-sm">
-        <span className="mb-1.5 block text-muted">Public username</span>
-        <div className="mt-0 flex items-center gap-2">
-          <span className="font-data text-muted">/u/</span>
+      <div className="glass-panel space-y-5 rounded-2xl p-5 md:p-6">
+        <div>
+          <label htmlFor="name" className="mb-1.5 block text-sm text-muted">
+            Display name
+          </label>
           <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            pattern="[a-zA-Z0-9_-]+"
-            className="field font-data"
-            placeholder="your-handle"
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="field"
           />
         </div>
-      </label>
-      <label className="block text-sm">
-        <span className="mb-1.5 block text-muted">Bio</span>
-        <textarea
-          value={bio}
-          onChange={(e) => setBio(e.target.value)}
-          rows={3}
-          className="field h-auto min-h-[5.5rem] py-2.5"
-        />
-      </label>
-      <label className="flex cursor-pointer items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={isPublic}
-          onChange={(e) => setIsPublic(e.target.checked)}
-          className="size-4 rounded border-border"
-        />
-        Public profile
-      </label>
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      {msg ? <p className="text-sm text-band-pupil">{msg}</p> : null}
-      <Button type="submit" disabled={pending}>
-        {pending ? "Saving…" : "Save changes"}
-      </Button>
+
+        <div>
+          <label htmlFor="username" className="mb-1.5 block text-sm text-muted">
+            Public username
+          </label>
+          <div className="flex items-center gap-2">
+            <span className="font-data text-sm text-muted">/u/</span>
+            <input
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="field font-data"
+              placeholder="your-handle"
+              aria-invalid={!usernameValid}
+              aria-describedby="username-hint"
+            />
+          </div>
+          <p
+            id="username-hint"
+            className={`mt-1.5 text-xs ${usernameValid ? "text-muted" : "text-destructive"}`}
+          >
+            {usernameValid
+              ? username
+                ? `Your card will live at /u/${username}`
+                : "Letters, numbers, hyphens, and underscores."
+              : "Only letters, numbers, hyphens, and underscores."}
+          </p>
+        </div>
+
+        <div>
+          <div className="mb-1.5 flex items-baseline justify-between">
+            <label htmlFor="bio" className="text-sm text-muted">
+              Bio
+            </label>
+            <span
+              className={`font-data text-xs ${bio.length > BIO_MAX ? "text-destructive" : "text-muted"}`}
+              data-numeric
+            >
+              {bio.length}/{BIO_MAX}
+            </span>
+          </div>
+          <textarea
+            id="bio"
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            rows={3}
+            className="field h-auto min-h-[5.5rem] py-2.5"
+            placeholder="Preparing for interviews · pattern-first"
+          />
+        </div>
+      </div>
+
+      <fieldset className="glass-panel rounded-2xl p-5 md:p-6">
+        <legend className="sr-only">Profile visibility</legend>
+        <div className="space-y-2">
+          {[
+            {
+              value: true,
+              icon: Globe,
+              title: "Public",
+              body: "Anyone with the link sees your Trajectory and mastery curve.",
+            },
+            {
+              value: false,
+              icon: Lock,
+              title: "Private",
+              body: "Only you can see your profile. The link returns a private notice.",
+            },
+          ].map((opt) => {
+            const Icon = opt.icon;
+            const selected = isPublic === opt.value;
+            return (
+              <label
+                key={opt.title}
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition ${
+                  selected
+                    ? "border-band-expert/45 bg-band-expert/[0.07]"
+                    : "border-border hover:bg-ink-sunken/60"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="visibility"
+                  checked={selected}
+                  onChange={() => setIsPublic(opt.value)}
+                  className="sr-only"
+                />
+                <Icon
+                  className={`mt-0.5 size-4 shrink-0 ${selected ? "text-band-expert" : "text-muted"}`}
+                  aria-hidden
+                />
+                <span>
+                  <span className="block text-sm font-medium">{opt.title}</span>
+                  <span className="mt-0.5 block text-xs leading-relaxed text-muted">
+                    {opt.body}
+                  </span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      {error ? (
+        <p
+          className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          role="alert"
+        >
+          {error}
+        </p>
+      ) : null}
+
+      <div className="flex items-center gap-3">
+        <Button type="submit" disabled={pending || !usernameValid}>
+          {pending ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+          ) : null}
+          {pending ? "Saving…" : "Save changes"}
+        </Button>
+        {msg ? (
+          <span
+            className="inline-flex items-center gap-1.5 text-sm text-band-pupil"
+            role="status"
+          >
+            <Check className="size-4" aria-hidden />
+            {msg}
+          </span>
+        ) : null}
+      </div>
     </form>
   );
 }

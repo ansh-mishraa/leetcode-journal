@@ -15,9 +15,11 @@ export default async function SettingsPage() {
       <PageHeader
         eyebrow="Settings"
         title="Your identity"
-        description="Claim a public username so others can find /u/you. Control who sees your Trajectory."
+        description="Claim a public username so others can find /u/you, and choose who sees your Trajectory."
+        backHref="/dashboard"
+        backLabel="Dashboard"
       />
-      <div className="max-w-lg">
+      <div className="max-w-xl">
         <SettingsForm
           initial={{
             name: user.name,

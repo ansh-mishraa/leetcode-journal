@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { KeepSolvedLogo } from "@/components/brand/logo";
 import { Reveal } from "@/components/ui/reveal";
 import { Button } from "@/components/ui/button";
 
@@ -56,9 +57,7 @@ export function LandingCta({
       </Reveal>
 
       <footer className="mx-auto mt-14 flex max-w-6xl flex-wrap items-center justify-between gap-3 px-1 text-xs text-muted">
-        <span className="font-display text-sm text-foreground">
-          LeetCode Journal
-        </span>
+        <KeepSolvedLogo size="sm" />
         <div className="flex gap-5">
           <Link href="/try" className="transition hover:text-foreground">
             Try
