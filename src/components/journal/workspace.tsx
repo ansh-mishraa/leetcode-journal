@@ -97,18 +97,26 @@ export function JournalWorkspace({
   const [complexity, setComplexity] = useState(entry.complexity ?? "");
   const [status, setStatus] = useState(entry.status);
   const [confidence, setConfidence] = useState(entry.confidence ?? 3);
-  const [elements, setElements] = useState<unknown>(
-    entry.diagram?.elements ?? [],
-  );
-  const [appState, setAppState] = useState<unknown>(
-    entry.diagram?.appState ?? {},
-  );
+  // Held in a ref, not state: the canvas fires onChange on every pointer move,
+  // and re-rendering the workspace from that feeds Excalidraw its own output.
+  const diagram = useRef<{ elements: unknown; appState: unknown }>({
+    elements: entry.diagram?.elements ?? [],
+    appState: entry.diagram?.appState ?? {},
+  });
+  // The canvas is mounted lazily on first visit and then hidden rather than
+  // unmounted, so unsaved strokes survive tab switches.
+  const [boardVisited, setBoardVisited] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const mounted = useRef(false);
+
+  const selectTab = useCallback((next: TabId) => {
+    setTab(next);
+    if (next === "board") setBoardVisited(true);
+  }, []);
 
   useEffect(() => {
     if (!mounted.current) {
@@ -127,8 +135,6 @@ export function JournalWorkspace({
     complexity,
     status,
     confidence,
-    elements,
-    appState,
   ]);
 
   const save = useCallback(() => {
@@ -146,8 +152,8 @@ export function JournalWorkspace({
         complexity,
         status,
         confidence,
-        diagramElements: elements,
-        diagramAppState: appState,
+        diagramElements: diagram.current.elements,
+        diagramAppState: diagram.current.appState,
       });
       if (res.ok) {
         setDirty(false);
@@ -168,8 +174,6 @@ export function JournalWorkspace({
     complexity,
     status,
     confidence,
-    elements,
-    appState,
   ]);
 
   useEffect(() => {
@@ -312,7 +316,7 @@ export function JournalWorkspace({
                   type="button"
                   role="tab"
                   aria-selected={isActive}
-                  onClick={() => setTab(t.id)}
+                  onClick={() => selectTab(t.id)}
                   className={cn(
                     "inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl px-3.5 py-2 text-sm transition",
                     isActive
@@ -421,15 +425,17 @@ export function JournalWorkspace({
               <NotesEditor initial={notes} onChange={setNotes} />
             ) : null}
 
-            {tab === "board" ? (
-              <DiagramCanvas
-                initialElements={elements}
-                initialAppState={appState}
-                onChange={(els, state) => {
-                  setElements(els);
-                  setAppState(state);
-                }}
-              />
+            {boardVisited ? (
+              <div className={cn(tab !== "board" && "hidden")}>
+                <DiagramCanvas
+                  initialElements={entry.diagram?.elements ?? null}
+                  initialAppState={entry.diagram?.appState ?? null}
+                  onChange={(els, state) => {
+                    diagram.current = { elements: els, appState: state };
+                    setDirty(true);
+                  }}
+                />
+              </div>
             ) : null}
 
             {tab === "code" ? (
