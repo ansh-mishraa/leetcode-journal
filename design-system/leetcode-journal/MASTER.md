@@ -7,9 +7,10 @@
 
 - **Name:** KeepSolved
 - **Tagline:** Solve it once. Still know it on interview day.
-- **Mark:** Check kept inside a return arc (retention / spaced revisit)
-- **Wordmark:** Keep (chalk) + Solved (spectrum gradient)
-- **Assets:** `public/brand/mark.png`, `public/brand/lockup.png`, `src/components/brand/logo.tsx`
+- **Mark:** Chalk check (solved) cradled by a spectrum keep-arm; amber pin = next review
+- **Wordmark:** Keep (chalk / foreground) + Solved (spectrum gradient)
+- **Theme:** Mark tile + check use CSS tokens (`--ink-raised`, `--border`, `currentColor`); static SVGs also respect `prefers-color-scheme`
+- **Assets:** `public/brand/mark.svg`, `public/brand/mark-dark.svg`, `public/brand/lockup.svg`, `src/components/brand/logo.tsx`
 
 ## Product
 

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" fill="none" role="img" aria-label="KeepSolved">
+  <title>KeepSolved</title>
+  <style>
+    .tile { fill: #fff; stroke: rgba(18,21,28,0.1); }
+    .check { stroke: #12151C; }
+    .keep { fill: #12151C; }
+    @media (prefers-color-scheme: dark) {
+      .tile { fill: #161B24; stroke: rgba(255,255,255,0.08); }
+      .check { stroke: #ECEEF2; }
+      .keep { fill: #ECEEF2; }
+    }
+  </style>
+  <g transform="translate(0,4)">
+    <rect class="tile" x="1" y="1" width="38" height="38" rx="10" stroke-width="1.5"/>
+    <path d="M27 11.2A11 11 0 1 0 27 28.8" stroke="url(#ksl)" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="27" cy="11.2" r="2" fill="#F59E0B"/>
+    <path class="check" d="M13.2 20.6l5 5L30.2 13.2" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="52" y="32" font-family="ui-sans-serif, system-ui, sans-serif" font-size="24" font-weight="700" letter-spacing="-0.04em">
+    <tspan class="keep">Keep</tspan><tspan fill="url(#ksw)">Solved</tspan>
+  </text>
+  <defs>
+    <linearGradient id="ksl" x1="8" y1="30" x2="28" y2="10">
+      <stop stop-color="#10B981"/><stop offset="0.5" stop-color="#3B82F6"/><stop offset="1" stop-color="#F59E0B"/>
+    </linearGradient>
+    <linearGradient id="ksw" x1="100" y1="10" x2="210" y2="40">
+      <stop stop-color="#10B981"/><stop offset="0.5" stop-color="#3B82F6"/><stop offset="1" stop-color="#F59E0B"/>
+    </linearGradient>
+  </defs>
+</svg>
