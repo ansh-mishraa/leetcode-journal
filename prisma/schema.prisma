@@ -1,0 +1,333 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Better Auth ───────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // App profile
+  username      String?   @unique
+  bio           String?
+  isPublic      Boolean   @default(true)
+  skillBand     SkillBand @default(NEWCOMER)
+
+  sessions         Session[]
+  accounts         Account[]
+  platformAccounts PlatformAccount[]
+  dailyActivity    DailyActivity[]
+  journalEntries   JournalEntry[]
+  reviewCards      ReviewCard[]
+  patternTriggers  PatternTrigger[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verification")
+}
+
+// ─── Platform aggregation ──────────────────────────────────────
+
+enum Platform {
+  LEETCODE
+  CODEFORCES
+  CODECHEF
+  GEEKSFORGEEKS
+  HACKERRANK
+  ATCODER
+  INTERVIEWBIT
+  CODE360
+  GITHUB
+}
+
+enum AccountStatus {
+  UNVERIFIED
+  VERIFIED
+  FAILED
+}
+
+enum SyncStatus {
+  IDLE
+  SYNCING
+  SUCCESS
+  ERROR
+}
+
+enum SkillBand {
+  NEWCOMER
+  PUPIL
+  SPECIALIST
+  EXPERT
+  CANDIDATE_MASTER
+  MASTER
+  GRANDMASTER
+}
+
+model PlatformAccount {
+  id                String        @id @default(cuid())
+  userId            String
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform          Platform
+  handle            String
+  status            AccountStatus @default(UNVERIFIED)
+  verificationToken String?
+  verifiedAt        DateTime?
+  lastSyncedAt      DateTime?
+  syncStatus        SyncStatus    @default(IDLE)
+  syncError         String?
+  avatarUrl         String?
+  profileUrl        String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  snapshots PlatformSnapshot[]
+
+  @@unique([userId, platform])
+  @@index([platform, handle])
+  @@index([syncStatus, lastSyncedAt])
+  @@map("platform_account")
+}
+
+model PlatformSnapshot {
+  id                String          @id @default(cuid())
+  platformAccountId String
+  platformAccount   PlatformAccount @relation(fields: [platformAccountId], references: [id], onDelete: Cascade)
+  capturedAt        DateTime        @default(now())
+  totalSolved       Int?
+  easy              Int?
+  medium            Int?
+  hard              Int?
+  rating            Float?
+  maxRating         Float?
+  contestsAttended  Int?
+  ranking           Int?
+  reputation        Int?
+  badges            Json?
+  topics            Json?
+  ratingHistory     Json?
+  raw               Json?
+
+  @@index([platformAccountId, capturedAt])
+  @@map("platform_snapshot")
+}
+
+model DailyActivity {
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform Platform
+  date     DateTime @db.Date
+  count    Int      @default(0)
+
+  @@unique([userId, platform, date])
+  @@index([userId, date])
+  @@map("daily_activity")
+}
+
+// ─── Phase 2: Journal ──────────────────────────────────────────
+
+model Problem {
+  id               String   @id @default(cuid())
+  source           Platform @default(LEETCODE)
+  titleSlug        String
+  title            String
+  frontendId       String?
+  difficulty       String?
+  contentHtml      String?
+  topicTags        Json?
+  hints            Json?
+  codeSnippets     Json?
+  sampleTestCases  String?
+  similarQuestions Json?
+  stats            Json?
+  isPaidOnly       Boolean  @default(false)
+  fetchedAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  journalEntries JournalEntry[]
+
+  @@unique([source, titleSlug])
+  @@map("problem")
+}
+
+model JournalEntry {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problemId  String
+  problem    Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  status     String   @default("attempting") // attempting | solved | reviewing
+  confidence Int? // 1-5
+  approach   String?
+  pitfalls   String?
+  pattern    String?
+  trigger    String? // signal that points to the pattern ("sorted + pair" → two pointers)
+  complexity String?
+  notes      Json? // BlockNote Block[]
+  notesMd    String?
+  solution   String?
+  language   String?
+  starred    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  diagram         Diagram?
+  reviewCards     ReviewCard[]
+  patternTriggers PatternTrigger[]
+
+  @@unique([userId, problemId])
+  @@index([userId, updatedAt])
+  @@map("journal_entry")
+}
+
+/// Personal trigger → pattern map (the recognition skill object)
+model PatternTrigger {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entryId   String?
+  entry     JournalEntry? @relation(fields: [entryId], references: [id], onDelete: SetNull)
+  trigger   String
+  pattern   String
+  notes     String?
+  source    String        @default("manual") // manual | groq
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([userId, pattern])
+  @@map("pattern_trigger")
+}
+
+model Diagram {
+  id           String       @id @default(cuid())
+  entryId      String       @unique
+  entry        JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  elements     Json
+  appState     Json
+  thumbnailUrl String?
+  updatedAt    DateTime     @updatedAt
+
+  files DiagramFile[]
+
+  @@map("diagram")
+}
+
+model DiagramFile {
+  id         String   @id
+  diagramId  String
+  diagram    Diagram  @relation(fields: [diagramId], references: [id], onDelete: Cascade)
+  mimeType   String
+  storageKey String
+  createdAt  DateTime @default(now())
+
+  @@map("diagram_file")
+}
+
+enum FsrsState {
+  New
+  Learning
+  Review
+  Relearning
+}
+
+enum ReviewMode {
+  RECALL
+  REIMPLEMENT
+  DIAGNOSE
+}
+
+model ReviewCard {
+  id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entryId       String
+  entry         JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  due           DateTime     @default(now())
+  stability     Float        @default(0)
+  difficulty    Float        @default(0)
+  elapsedDays   Float        @default(0)
+  scheduledDays Float        @default(0)
+  reps          Int          @default(0)
+  lapses        Int          @default(0)
+  state         FsrsState    @default(New)
+  learningSteps Int          @default(0)
+  lastReview    DateTime?
+  lastMode      ReviewMode?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  logs ReviewLog[]
+
+  @@unique([userId, entryId])
+  @@index([userId, due])
+  @@map("review_card")
+}
+
+model ReviewLog {
+  id            String     @id @default(cuid())
+  cardId        String
+  card          ReviewCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  rating        Int // 1=Again 2=Hard 3=Good 4=Easy
+  mode          ReviewMode @default(RECALL)
+  recalledPattern String?
+  state         FsrsState
+  due           DateTime
+  stability     Float
+  createdAt     DateTime   @default(now())
+
+  @@index([cardId, createdAt])
+  @@map("review_log")
+}
