@@ -37,14 +37,14 @@ export default async function JournalIndexPage() {
     <AppShell active="/journal">
       <PageHeader
         eyebrow="Journal"
-        title="Problem journal"
-        description="Paste a LeetCode URL. Capture the trigger, draw the structure, save the solution — Recall schedules the rest."
+        title="Your saved problems"
+        description="All your problems in one place. Add notes, draw diagrams, write solutions. We'll handle the review schedule."
         action={
           <Button
             href="/recall"
             variant={dueCount > 0 ? "primary" : "secondary"}
           >
-            {dueCount > 0 ? `Review ${dueCount} due` : "Recall Engine"}
+            {dueCount > 0 ? `Review ${dueCount} due` : "Practice recall"}
           </Button>
         }
       />
@@ -56,11 +56,11 @@ export default async function JournalIndexPage() {
           className="mt-8"
           icon={BookOpen}
           accent="var(--band-master)"
-          title="Your first entry awaits"
-          description="Paste any leetcode.com/problems/… URL above, or start with two-sum to see the whole loop in a minute."
+          title="Start your collection"
+          description="Paste any LeetCode URL above to add your first problem, or use Try for a guided walkthrough."
           actions={
-            <Button href="/try" variant="secondary">
-              Try without saving
+            <Button href="/try">
+              Start here
             </Button>
           }
         />

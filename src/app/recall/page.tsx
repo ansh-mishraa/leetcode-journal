@@ -1,9 +1,10 @@
-import { Brain, Layers, Target, Zap } from "lucide-react";
+import { ArrowRight, Brain, Layers, Target, Zap } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { ReviewClient } from "@/components/journal/review-client";
 import { MasteryCurve } from "@/components/mastery-curve";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { requireSession } from "@/lib/session";
 import { getDueCards } from "@/server/journal/fsrs";
@@ -12,23 +13,54 @@ import { prisma } from "@/lib/db";
 
 export default async function RecallPage() {
   const session = await requireSession();
-  const [due, summary, mastery, triggerCount] = await Promise.all([
+  const [due, summary, mastery, triggerCount, entryCount] = await Promise.all([
     getDueCards(session.user.id, 30),
     getMasterySummary(session.user.id),
     getMasteryCurve(session.user.id),
     prisma.patternTrigger.count({ where: { userId: session.user.id } }),
+    prisma.journalEntry.count({ where: { userId: session.user.id } }),
   ]);
+
+  // Brand-new accounts: one invitation, not a wall of zeros.
+  if (entryCount === 0) {
+    return (
+      <AppShell active="/recall">
+        <PageHeader
+          eyebrow="Practice recall"
+          title="Add a problem first"
+          description="Once you save a problem, we'll schedule review sessions to help you remember it long-term."
+        />
+        <EmptyState
+          icon={Brain}
+          accent="var(--band-expert)"
+          title="No problems yet"
+          description="Start by adding any LeetCode problem. Write what triggers the pattern. Then come back here to practice remembering it."
+          actions={
+            <>
+              <Button href="/try">
+                Add your first problem
+                <ArrowRight className="size-4" aria-hidden />
+              </Button>
+              <Button href="/journal" variant="secondary">
+                Open journal
+              </Button>
+            </>
+          }
+        />
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell active="/recall">
       <PageHeader
-        eyebrow="Recall Engine"
-        title={due.length > 0 ? `${due.length} due today` : "Recall Engine"}
-        description="Graded drills on an FSRS schedule. Grade honestly — Again is progress, not failure."
+        eyebrow="Practice recall"
+        title={due.length > 0 ? `${due.length} ready to review` : "Up to date"}
+        description="Test yourself on each problem. Grade honestly — struggling means you're learning."
         action={
           <div className="flex flex-wrap items-center gap-2">
             <Button href="/try" variant="secondary">
-              Try a problem
+              Add a problem
             </Button>
             <Button href="/journal" variant="ghost">
               Journal
@@ -39,35 +71,37 @@ export default async function RecallPage() {
 
       <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Due now"
+          label="Ready now"
           value={summary.dueToday}
           icon={Zap}
           accent="var(--band-expert)"
-          hint="Cards ready to grade"
+          hint="Problems to review today"
         />
         <StatCard
           label="Retention"
           value={`${summary.retentionScore}`}
           icon={Target}
           accent="var(--band-pupil)"
-          hint="Composite of stability + accuracy"
+          hint="How well you remember"
         />
         <StatCard
-          label="Mature cards"
+          label="Strong recall"
           value={summary.matureCards}
           icon={Layers}
-          hint="Stability over 7 days"
+          hint="Problems you know well"
         />
         <StatCard
-          label="Pattern triggers"
+          label="Patterns saved"
           value={triggerCount}
           icon={Brain}
           accent="var(--band-master)"
-          hint="Your recognition library"
+          hint="Your pattern library"
         />
       </div>
 
-      <MasteryCurve points={mastery} className="mb-8" />
+      {mastery.length > 0 ? (
+        <MasteryCurve points={mastery} className="mb-8" />
+      ) : null}
 
       <ReviewClient
         cards={due.map((c) => ({

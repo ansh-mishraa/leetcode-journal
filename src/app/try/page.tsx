@@ -14,11 +14,15 @@ export default async function TryPage() {
   const session = await getSession();
 
   return (
-    <AppShell marketing={!session}>
+    <AppShell marketing={!session} active={session ? "/try" : undefined}>
       <PageHeader
-        eyebrow={session ? "Quick capture" : "Try instantly · no signup"}
-        title="Load a problem. Feel the loop."
-        description="Paste a LeetCode URL, write the signal that points to the pattern, then save when you want scheduled reviews."
+        eyebrow={session ? "Add a problem" : "Try instantly · no signup"}
+        title={session ? "Add your next problem" : "See how it works"}
+        description={
+          session
+            ? "Paste any LeetCode URL. Write what triggers this pattern. That's it — we'll schedule the recall practice for you."
+            : "Paste a LeetCode URL and write what triggers the pattern. Save when you're ready for scheduled recall practice."
+        }
       />
       <TryWorkspace signedIn={Boolean(session)} />
     </AppShell>

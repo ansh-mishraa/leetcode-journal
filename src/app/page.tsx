@@ -14,9 +14,9 @@ import { absoluteUrl } from "@/lib/utils";
 
 export default async function HomePage() {
   const session = await getSession();
-  const primaryHref = session ? "/recall" : "/try";
+  const primaryHref = session ? "/start" : "/try";
   const primaryLabel = session
-    ? "Open Recall Engine"
+    ? "Continue where you left off"
     : "Try a problem — no signup";
 
   const jsonLd = {
@@ -93,81 +93,50 @@ export default async function HomePage() {
       <LandingFlow />
       <LandingModes />
 
-      {/* Differentiator — retention vs aggregation */}
+      {/* Core value props */}
       <section className="px-4 py-16 md:py-24">
-        <div className="mx-auto grid max-w-6xl gap-4 md:grid-cols-2 md:gap-6">
+        <div className="mx-auto max-w-6xl">
           <Reveal>
-            <article className="relative overflow-hidden rounded-3xl border border-border bg-ink-raised p-7 md:p-9">
+            <article className="relative overflow-hidden rounded-3xl border border-border bg-ink-raised p-8 md:p-12">
               <div
-                className="pointer-events-none absolute -right-8 top-0 size-40 rounded-full blur-3xl"
+                className="pointer-events-none absolute -right-8 top-0 size-48 rounded-full blur-3xl"
                 style={{
                   background:
                     "color-mix(in srgb, var(--band-expert) 20%, transparent)",
                 }}
                 aria-hidden
               />
-              <p className="font-data text-[11px] uppercase tracking-[0.2em] text-muted">
-                The product
-              </p>
-              <h2 className="mt-3 font-display text-2xl tracking-tight md:text-3xl">
-                Recall Engine
-              </h2>
-              <p className="mt-3 text-sm leading-relaxed text-muted md:text-base">
-                Pattern triggers, graded drills, and a mastery curve for what
-                you&apos;ll actually remember — not what you once solved.
-              </p>
-              <svg
-                viewBox="0 0 320 100"
-                className="mt-8 h-auto w-full"
-                aria-hidden
-              >
-                <path
-                  d="M20 80 C60 78, 80 70, 110 55 S160 30, 200 35 S260 50, 300 18"
-                  fill="none"
-                  stroke="url(#diff-g)"
-                  strokeWidth="2.5"
-                  className="spark-draw"
-                />
-                <defs>
-                  <linearGradient id="diff-g" x1="0" x2="1">
-                    <stop offset="0%" stopColor="var(--band-pupil)" />
-                    <stop offset="100%" stopColor="var(--band-master)" />
-                  </linearGradient>
-                </defs>
-              </svg>
-            </article>
-          </Reveal>
-          <Reveal stagger={2}>
-            <article className="relative overflow-hidden rounded-3xl border border-border bg-ink-raised p-7 md:p-9">
-              <div
-                className="pointer-events-none absolute -right-8 top-0 size-40 rounded-full blur-3xl"
-                style={{
-                  background:
-                    "color-mix(in srgb, var(--band-master) 18%, transparent)",
-                }}
-                aria-hidden
-              />
-              <p className="font-data text-[11px] uppercase tracking-[0.2em] text-muted">
-                The reward
-              </p>
-              <h2 className="mt-3 font-display text-2xl tracking-tight md:text-3xl">
-                Trajectory card
-              </h2>
-              <p className="mt-3 text-sm leading-relaxed text-muted md:text-base">
-                Connect platforms when you want shareable proof. Aggregation is
-                credibility — never the toll before you get value.
-              </p>
-              <div className="mt-8 flex items-end gap-2">
-                {[40, 55, 48, 70, 62, 85, 92].map((h, i) => (
-                  <div
-                    key={i}
-                    className="flex-1 rounded-t-md"
-                    style={{
-                      height: `${h * 0.7}px`,
-                      background: `color-mix(in srgb, var(--band-expert) ${30 + i * 8}%, transparent)`,
-                    }}
+              <div className="relative">
+                <p className="font-data text-[11px] uppercase tracking-[0.2em] text-muted">
+                  The system
+                </p>
+                <h2 className="mt-3 font-display text-3xl tracking-tight md:text-4xl">
+                  Remember patterns, not solutions
+                </h2>
+                <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted md:text-lg">
+                  Write the pattern trigger for each problem. Practice recall on a schedule. 
+                  Watch your retention grow as the loop keeps everything fresh until interview day.
+                </p>
+                <svg
+                  viewBox="0 0 400 100"
+                  className="mt-10 h-auto w-full"
+                  aria-hidden
+                >
+                  <path
+                    d="M20 80 C80 75, 120 65, 160 50 S240 25, 280 30 S350 45, 380 15"
+                    fill="none"
+                    stroke="url(#curve-g)"
+                    strokeWidth="3"
+                    className="spark-draw"
                   />
-                ))}
+                  <defs>
+                    <linearGradient id="curve-g" x1="0" x2="1">
+                      <stop offset="0%" stopColor="var(--band-pupil)" />
+                      <stop offset="50%" stopColor="var(--band-expert)" />
+                      <stop offset="100%" stopColor="var(--band-master)" />
+                    </linearGradient>
+                  </defs>
+                </svg>
               </div>
             </article>
           </Reveal>

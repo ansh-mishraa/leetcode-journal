@@ -8,24 +8,24 @@ import { cn } from "@/lib/utils";
 const steps = [
   {
     n: "01",
-    title: "Try instantly",
-    body: "Paste a LeetCode URL. Sketch the signal that points to the pattern. No account until you want to keep it.",
+    title: "Add a problem",
+    body: "Paste any LeetCode URL. Write what triggers this pattern — like 'sorted array + target' → binary search. No signup required to try.",
     icon: PenLine,
     accent: "var(--band-pupil)",
     visual: "trigger",
   },
   {
     n: "02",
-    title: "Journal the why",
-    body: "Notes, whiteboard, solution. Groq drafts your pattern triggers from what you already wrote.",
+    title: "Save your notes",
+    body: "Add notes, draw diagrams, paste your solution. AI can help draft pattern triggers from what you write.",
     icon: Brain,
     accent: "var(--band-expert)",
     visual: "journal",
   },
   {
     n: "03",
-    title: "Recall on schedule",
-    body: "FSRS brings it back. Grade Recall, Re-implement, or Diagnose so interview day isn’t a blank page.",
+    title: "Practice recall",
+    body: "We'll remind you to review before you forget. Test yourself, grade honestly, and watch your retention improve.",
     icon: RotateCcw,
     accent: "var(--band-master)",
     visual: "recall",
@@ -193,10 +193,10 @@ export function LandingFlow() {
       <div className="mx-auto max-w-6xl">
         <Reveal>
           <p className="font-data text-[11px] uppercase tracking-[0.22em] text-muted">
-            The loop
+            How it works
           </p>
           <h2 className="mt-3 max-w-xl font-display text-3xl tracking-tight md:text-5xl">
-            From one problem to muscle memory
+            From one problem to long-term memory
           </h2>
         </Reveal>
 

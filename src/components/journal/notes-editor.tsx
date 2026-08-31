@@ -8,16 +8,20 @@ import "@blocknote/core/fonts/inter.css";
 export function NotesEditor({
   initial,
   onChange,
+  minHeightClassName = "min-h-[240px]",
 }: {
   initial: unknown;
   onChange: (doc: unknown) => void;
+  minHeightClassName?: string;
 }) {
   const editor = useCreateBlockNote({
     initialContent: Array.isArray(initial) && initial.length > 0 ? initial : undefined,
   });
 
   return (
-    <div className="min-h-[240px] overflow-hidden rounded-lg border border-border bg-card">
+    <div
+      className={`${minHeightClassName} overflow-hidden rounded-lg border border-border bg-card`}
+    >
       <BlockNoteView
         editor={editor}
         theme="dark"

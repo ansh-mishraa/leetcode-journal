@@ -1,7 +1,5 @@
-import { ArrowRight, Brain, Flame, Link2, NotebookPen, Target } from "lucide-react";
+import { ArrowRight, Brain, NotebookPen, Target } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { ProfileView } from "@/components/profile-view";
-import { RefreshButton } from "@/components/refresh-button";
 import { MasteryCurve } from "@/components/mastery-curve";
 import { PageHeader } from "@/components/ui/page-header";
 import { NextStepBanner } from "@/components/ui/next-step-banner";
@@ -9,63 +7,86 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
 import { requireSession } from "@/lib/session";
-import { getAggregatedProfile } from "@/server/aggregation";
 import { getMasteryCurve, getMasterySummary } from "@/server/journal/mastery";
 import { prisma } from "@/lib/db";
 
 export default async function DashboardPage() {
   const session = await requireSession();
-  const [profile, entryCount, summary, mastery] = await Promise.all([
-    getAggregatedProfile(session.user.id),
+  const [entryCount, summary, mastery, reviewCount] = await Promise.all([
     prisma.journalEntry.count({ where: { userId: session.user.id } }),
     getMasterySummary(session.user.id),
     getMasteryCurve(session.user.id),
+    prisma.reviewLog.count({
+      where: { card: { userId: session.user.id } },
+    }),
   ]);
-  const platformCount = profile?.platforms.length ?? 0;
+  const hasJournaled = entryCount > 0;
+  const hasRecalled = reviewCount > 0;
 
   const steps = [
     {
       id: "try",
-      label: "Journal a problem",
-      hint: "Paste a URL, capture trigger → pattern.",
+      label: "Add your first problem",
+      hint: "Pick any LeetCode problem and write what triggers the pattern.",
       href: "/try",
-      done: entryCount > 0,
-      current: entryCount === 0,
+      done: hasJournaled,
+      current: !hasJournaled,
     },
     {
       id: "recall",
-      label: "Run a Recall session",
-      hint: "Grade what's due so intervals adapt.",
+      label: "Practice recall",
+      hint:
+        summary.dueToday > 0
+          ? `${summary.dueToday} card${summary.dueToday === 1 ? "" : "s"} ready now.`
+          : "Wait for your first card to come due, then test yourself.",
       href: "/recall",
-      done: summary.totalCards > 0 && summary.dueToday === 0,
-      current: entryCount > 0 && summary.dueToday > 0,
-    },
-    {
-      id: "connect",
-      label: "Connect platforms (optional)",
-      hint: "Unlock the Trajectory on your public card.",
-      href: "/dashboard/platforms",
-      done: platformCount > 0,
-      current: entryCount > 0 && platformCount === 0,
+      done: hasRecalled,
+      current: hasJournaled && !hasRecalled,
     },
   ];
+
+  // Zero-entry: one clear path, not stats + platform empty state.
+  if (!hasJournaled) {
+    return (
+      <AppShell active="/dashboard">
+        <PageHeader
+          eyebrow="Profile"
+          title="Welcome to KeepSolved"
+          description="Your progress and retention stats will appear here as you solve problems and practice recall."
+        />
+        <NextStepBanner title="Get started" steps={steps} />
+        <EmptyState
+          icon={NotebookPen}
+          accent="var(--band-pupil)"
+          title="Ready to remember what you solve?"
+          description="Add a problem, write the pattern trigger, then let the recall loop keep it fresh until interview day."
+          actions={
+            <Button href="/try">
+              Add your first problem
+              <ArrowRight className="size-4" aria-hidden />
+            </Button>
+          }
+        />
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell active="/dashboard">
       <PageHeader
         eyebrow="Profile"
-        title="Your Trajectory"
-        description="Shareable proof of progress. Retention lives in Recall — this is the reward layer."
+        title="Your progress"
+        description="Track your retention and keep problems fresh until interview day."
         action={
           <div className="flex flex-wrap items-center gap-2">
             <Button
-              href="/recall"
+              href={summary.dueToday > 0 ? "/recall" : "/try"}
               variant={summary.dueToday > 0 ? "primary" : "secondary"}
             >
               <Brain className="size-4" aria-hidden />
               {summary.dueToday > 0
                 ? `Review ${summary.dueToday} due`
-                : "Recall Engine"}
+                : "Add a problem"}
             </Button>
             {!session.user.username ? (
               <Button href="/dashboard/settings" variant="ghost">
@@ -73,23 +94,25 @@ export default async function DashboardPage() {
               </Button>
             ) : (
               <Button href={`/u/${session.user.username}`} variant="secondary">
-                Share card
+                Share profile
               </Button>
             )}
           </div>
         }
       />
 
-      {steps.some((s) => !s.done) ? <NextStepBanner steps={steps} /> : null}
+      {steps.some((s) => !s.done) ? (
+        <NextStepBanner title="Your next step" steps={steps} />
+      ) : null}
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid gap-3 sm:grid-cols-3">
         <StatCard
-          label="Journal entries"
+          label="Problems saved"
           value={entryCount}
           icon={NotebookPen}
           accent="var(--band-pupil)"
           href="/journal"
-          hint="Problems with your own notes"
+          hint="Your pattern collection"
         />
         <StatCard
           label="Due today"
@@ -97,44 +120,31 @@ export default async function DashboardPage() {
           icon={Brain}
           accent="var(--band-expert)"
           href="/recall"
-          hint="Cards waiting to be graded"
+          hint="Ready to practice now"
         />
         <StatCard
           label="Retention"
           value={summary.retentionScore}
           icon={Target}
-          hint="Stability + accuracy composite"
-        />
-        <StatCard
-          label="Streak"
-          value={profile ? `${profile.streaks.current}d` : "—"}
-          icon={Flame}
-          accent="var(--band-master)"
-          hint={profile ? `Best ${profile.streaks.longest}d` : "Connect a platform"}
+          hint="How well you remember"
         />
       </div>
 
-      <MasteryCurve points={mastery} className="mb-6" />
-
-      {!profile || platformCount === 0 ? (
+      {mastery.length > 0 ? (
+        <MasteryCurve points={mastery} className="mb-6" />
+      ) : (
         <EmptyState
-          icon={Link2}
-          title="Trajectory unlocks with a platform"
-          description="Optional — connect LeetCode or Codeforces when you want a shareable rating curve. Journal and Recall already work without it."
+          icon={Brain}
+          accent="var(--band-expert)"
+          title="Your mastery curve will appear here"
+          description="As you practice recall, you'll see your retention improve over time. Keep solving and reviewing."
           actions={
-            <>
-              <Button href="/dashboard/platforms">
-                Connect a platform
-                <ArrowRight className="size-4" aria-hidden />
-              </Button>
-              <Button href="/try" variant="secondary">
-                Journal another problem
-              </Button>
-            </>
+            <Button href={summary.dueToday > 0 ? "/recall" : "/try"}>
+              {summary.dueToday > 0 ? "Practice recall now" : "Add another problem"}
+              <ArrowRight className="size-4" aria-hidden />
+            </Button>
           }
         />
-      ) : (
-        <ProfileView profile={profile} isOwner refreshSlot={<RefreshButton />} />
       )}
     </AppShell>
   );

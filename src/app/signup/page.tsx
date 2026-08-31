@@ -13,8 +13,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/try";
-  const callback = next.startsWith("/") ? next : "/try";
+  const next = searchParams.get("next") || "/start";
+  const callback = next.startsWith("/") ? next : "/start";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -140,7 +140,7 @@ function SignupForm() {
       <p className="mt-8 text-center text-sm text-muted">
         Already have an account?{" "}
         <Link
-          href={`/login${next !== "/try" ? `?next=${encodeURIComponent(next)}` : ""}`}
+          href={`/login${next !== "/start" ? `?next=${encodeURIComponent(next)}` : ""}`}
           className="text-foreground underline-offset-4 hover:underline"
         >
           Sign in

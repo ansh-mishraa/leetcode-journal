@@ -27,10 +27,12 @@ export function DiagramCanvas({
   initialElements,
   initialAppState,
   onChange,
+  heightClassName = "h-[480px]",
 }: {
   initialElements: unknown;
   initialAppState: unknown;
   onChange: (elements: unknown, appState: unknown) => void;
+  heightClassName?: string;
 }) {
   const api = useRef<unknown>(null);
 
@@ -71,7 +73,9 @@ export function DiagramCanvas({
   }, []);
 
   return (
-    <div className="h-[480px] overflow-hidden rounded-lg border border-border">
+    <div
+      className={`${heightClassName} overflow-hidden rounded-lg border border-border`}
+    >
       <Excalidraw
         excalidrawAPI={handleApi}
         initialData={initialData}

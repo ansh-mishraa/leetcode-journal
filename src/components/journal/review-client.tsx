@@ -154,11 +154,11 @@ export function ReviewClient({ cards: initial }: { cards: Card[] }) {
         description={
           total > 0
             ? `You graded ${total} card${total === 1 ? "" : "s"}. New intervals are scheduled — come back when they mature.`
-            : "Journal a problem and capture its pattern trigger. The Recall Engine fills as intervals mature."
+            : "No cards are due right now. Add another problem, or check back when intervals mature."
         }
         actions={
           <>
-            <Button href="/try">Try a problem</Button>
+            <Button href="/try">Add a problem</Button>
             <Button href="/journal" variant="secondary">
               Open journal
             </Button>

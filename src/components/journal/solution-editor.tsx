@@ -26,16 +26,18 @@ export function SolutionEditor({
   value,
   language,
   onChange,
+  height = "320px",
 }: {
   value: string;
   language: string;
   onChange: (v: string) => void;
+  height?: string;
 }) {
   return (
     <div className="overflow-hidden rounded-lg border border-border">
       <CodeMirror
         value={value}
-        height="320px"
+        height={height}
         theme={oneDark}
         extensions={[langExt(language)]}
         onChange={onChange}

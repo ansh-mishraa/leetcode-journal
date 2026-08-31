@@ -13,8 +13,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/recall";
-  const callback = next.startsWith("/") ? next : "/recall";
+  const next = searchParams.get("next") || "/start";
+  const callback = next.startsWith("/") ? next : "/start";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +106,7 @@ function LoginForm() {
       <p className="mt-8 text-center text-sm text-muted">
         No account?{" "}
         <Link
-          href={`/signup${next !== "/recall" ? `?next=${encodeURIComponent(next)}` : ""}`}
+          href={`/signup${next !== "/start" ? `?next=${encodeURIComponent(next)}` : ""}`}
           className="text-foreground underline-offset-4 hover:underline"
         >
           Create one free

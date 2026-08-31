@@ -28,8 +28,9 @@ export async function groqChat(opts: {
     };
   }
 
+  // llama-3.3-70b-versatile shut down for free/dev (Aug 2026). Prefer env override.
   const model =
-    process.env.GROQ_MODEL?.trim() || "llama-3.3-70b-versatile";
+    process.env.GROQ_MODEL?.trim() || "openai/gpt-oss-120b";
 
   try {
     const res = await fetch(GROQ_URL, {

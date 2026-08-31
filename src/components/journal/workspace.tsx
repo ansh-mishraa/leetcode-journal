@@ -1,13 +1,24 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import Link from "next/link";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  type ReactNode,
+} from "react";
 import {
   Check,
+  ChevronDown,
   Code2,
   FileText,
   Lightbulb,
   Loader2,
+  Maximize2,
+  Minimize2,
   PenTool,
   Sparkles,
   Target,
@@ -70,14 +81,19 @@ type Problem = {
   topicTags: unknown;
 };
 
-const TABS = [
-  { id: "recall", label: "Recall card", icon: Target },
-  { id: "notes", label: "Notes", icon: FileText },
-  { id: "board", label: "Whiteboard", icon: PenTool },
-  { id: "code", label: "Solution", icon: Code2 },
-] as const;
+type PanelId = "recall" | "notes" | "board" | "code";
 
-type TabId = (typeof TABS)[number]["id"];
+const AUTOSAVE_IDLE_MS = 2000;
+
+const PANEL_META: Record<
+  PanelId,
+  { label: string; icon: typeof Target }
+> = {
+  recall: { label: "Recall card", icon: Target },
+  notes: { label: "Notes", icon: FileText },
+  board: { label: "Whiteboard", icon: PenTool },
+  code: { label: "Solution", icon: Code2 },
+};
 
 export function JournalWorkspace({
   entry,
@@ -86,7 +102,6 @@ export function JournalWorkspace({
   entry: Entry;
   problem: Problem;
 }) {
-  const [tab, setTab] = useState<TabId>("recall");
   const [notes, setNotes] = useState<unknown>(entry.notes);
   const [solution, setSolution] = useState(entry.solution ?? "");
   const [language, setLanguage] = useState(entry.language ?? "typescript");
@@ -103,19 +118,42 @@ export function JournalWorkspace({
     elements: entry.diagram?.elements ?? [],
     appState: entry.diagram?.appState ?? {},
   });
-  // The canvas is mounted lazily on first visit and then hidden rather than
-  // unmounted, so unsaved strokes survive tab switches.
+  // The canvas is mounted lazily on first expand and then hidden rather than
+  // unmounted, so unsaved strokes survive compress / expand.
   const [boardVisited, setBoardVisited] = useState(false);
+  const [open, setOpen] = useState<Record<PanelId, boolean>>({
+    recall: true,
+    notes: true,
+    board: false,
+    code: true,
+  });
+  const [tall, setTall] = useState<Record<"notes" | "board" | "code", boolean>>({
+    notes: false,
+    board: false,
+    code: false,
+  });
   const [dirty, setDirty] = useState(false);
+  const [dirtyTick, setDirtyTick] = useState(0);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const mounted = useRef(false);
+  const dirtyRef = useRef(false);
+  const pendingRef = useRef(false);
 
-  const selectTab = useCallback((next: TabId) => {
-    setTab(next);
-    if (next === "board") setBoardVisited(true);
+  const markDirty = useCallback(() => {
+    setDirty(true);
+    setDirtyTick((t) => t + 1);
+  }, []);
+
+  const setPanelOpen = useCallback((id: PanelId, next: boolean) => {
+    setOpen((prev) => ({ ...prev, [id]: next }));
+    if (id === "board" && next) setBoardVisited(true);
+  }, []);
+
+  const toggleTall = useCallback((id: "notes" | "board" | "code") => {
+    setTall((prev) => ({ ...prev, [id]: !prev[id] }));
   }, []);
 
   useEffect(() => {
@@ -123,7 +161,7 @@ export function JournalWorkspace({
       mounted.current = true;
       return;
     }
-    setDirty(true);
+    markDirty();
   }, [
     notes,
     solution,
@@ -135,6 +173,7 @@ export function JournalWorkspace({
     complexity,
     status,
     confidence,
+    markDirty,
   ]);
 
   const save = useCallback(() => {
@@ -175,6 +214,31 @@ export function JournalWorkspace({
     status,
     confidence,
   ]);
+
+  const saveRef = useRef(save);
+
+  useEffect(() => {
+    dirtyRef.current = dirty;
+  }, [dirty]);
+
+  useEffect(() => {
+    pendingRef.current = pending;
+  }, [pending]);
+
+  useEffect(() => {
+    saveRef.current = save;
+  }, [save]);
+
+  // Auto-save after 2s of idle once there are unsaved changes.
+  useEffect(() => {
+    if (!dirty) return;
+    const id = window.setTimeout(() => {
+      if (dirtyRef.current && !pendingRef.current) {
+        saveRef.current();
+      }
+    }, AUTOSAVE_IDLE_MS);
+    return () => window.clearTimeout(id);
+  }, [dirty, dirtyTick, save]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -224,6 +288,12 @@ export function JournalWorkspace({
         .filter(Boolean)
     : [];
 
+  const saveLabel = pending
+    ? "Saving…"
+    : dirty
+      ? "Save"
+      : "Saved";
+
   return (
     <div className="space-y-5">
       {/* Sticky action bar */}
@@ -240,7 +310,13 @@ export function JournalWorkspace({
             </div>
             <p className="mt-0.5 font-data text-xs text-muted">
               {problem.titleSlug}
-              {savedAt && !dirty ? ` · saved ${savedAt}` : ""}
+              {pending
+                ? " · auto-saving…"
+                : dirty
+                  ? " · unsaved · auto-saves after idle"
+                  : savedAt
+                    ? ` · saved ${savedAt}`
+                    : ""}
             </p>
           </div>
 
@@ -264,14 +340,31 @@ export function JournalWorkspace({
               ) : dirty ? null : (
                 <Check className="size-4" aria-hidden />
               )}
-              {pending ? "Saving…" : dirty ? "Save" : "Saved"}
-              {dirty ? <kbd className="kbd ml-1">⌘S</kbd> : null}
+              {saveLabel}
+              {dirty && !pending ? <kbd className="kbd ml-1">⌘S</kbd> : null}
             </Button>
           </div>
         </div>
         {msg ? (
           <p className="mt-2 text-xs text-muted" role="status">
             {msg}
+          </p>
+        ) : null}
+        {!dirty && savedAt && trigger.trim() ? (
+          <p className="mt-2 text-sm text-muted" role="status">
+            Trigger saved — this problem is in your Recall deck.{" "}
+            <Link
+              href="/recall"
+              className="font-medium text-band-expert underline-offset-2 hover:underline"
+            >
+              Open Recall
+            </Link>{" "}
+            when you want to grade it.
+          </p>
+        ) : !dirty && savedAt && !trigger.trim() ? (
+          <p className="mt-2 text-sm text-muted" role="status">
+            Tip: add a pattern trigger in the Recall card below — that&apos;s what
+            you&apos;ll practice later.
           </p>
         ) : null}
       </header>
@@ -300,174 +393,255 @@ export function JournalWorkspace({
           />
         </section>
 
-        {/* Work surface */}
-        <section className="rounded-2xl border border-border bg-card">
-          <div
-            className="flex gap-1 overflow-x-auto border-b border-border px-2 py-2"
-            role="tablist"
-            aria-label="Workspace"
+        {/* Work surface — stacked collapsible panels */}
+        <div className="space-y-3">
+          <CollapsiblePanel
+            id="recall"
+            open={open.recall}
+            onOpenChange={(next) => setPanelOpen("recall", next)}
           >
-            {TABS.map((t) => {
-              const Icon = t.icon;
-              const isActive = tab === t.id;
-              return (
-                <button
-                  key={t.id}
+            <div className="space-y-5">
+              <div className="flex flex-wrap gap-2">
+                <Button
                   type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  onClick={() => selectTab(t.id)}
-                  className={cn(
-                    "inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl px-3.5 py-2 text-sm transition",
-                    isActive
-                      ? "bg-ink-sunken text-foreground"
-                      : "text-muted hover:text-foreground",
-                  )}
+                  variant="secondary"
+                  onClick={draftTriggers}
+                  disabled={pending}
                 >
-                  <Icon
-                    className={cn("size-4", isActive && "text-band-expert")}
-                    aria-hidden
-                  />
-                  {t.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="p-5">
-            {tab === "recall" ? (
-              <div className="space-y-5">
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={draftTriggers}
-                    disabled={pending}
-                  >
-                    <Sparkles className="size-4" aria-hidden />
-                    Draft triggers
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={askHint}
-                    disabled={pending}
-                  >
-                    <Lightbulb className="size-4" aria-hidden />
-                    Socratic hint
-                  </Button>
-                </div>
-                {hint ? (
-                  <p className="rounded-2xl border border-border bg-ink-sunken px-4 py-3 text-sm leading-relaxed">
-                    {hint}
-                  </p>
-                ) : null}
-
-                <Field
-                  label="Trigger"
-                  hint="The signal you noticed first — this is what Recall quizzes."
-                  value={trigger}
-                  onChange={setTrigger}
-                  placeholder="sorted array + find a pair summing to target"
-                />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field
-                    label="Pattern"
-                    value={pattern}
-                    onChange={setPattern}
-                    placeholder="two pointers"
-                  />
-                  <Field
-                    label="Complexity"
-                    value={complexity}
-                    onChange={setComplexity}
-                    placeholder="O(n) time / O(1) space"
-                  />
-                </div>
-                <Field
-                  label="Approach"
-                  value={approach}
-                  onChange={setApproach}
-                  placeholder="One or two sentences — not the full code"
-                  multiline
-                />
-                <Field
-                  label="Pitfalls"
-                  value={pitfalls}
-                  onChange={setPitfalls}
-                  placeholder="Off-by-one on the right bound…"
-                  multiline
-                />
-
-                <div>
-                  <div className="mb-2 flex items-center justify-between">
-                    <label htmlFor="confidence" className="text-sm text-muted">
-                      Confidence
-                    </label>
-                    <span className="font-data text-sm" data-numeric>
-                      {confidence}/5
-                    </span>
-                  </div>
-                  <input
-                    id="confidence"
-                    type="range"
-                    min={1}
-                    max={5}
-                    value={confidence}
-                    onChange={(e) => setConfidence(Number(e.target.value))}
-                    className="w-full cursor-pointer accent-[var(--band-expert)]"
-                  />
-                </div>
+                  <Sparkles className="size-4" aria-hidden />
+                  Draft triggers
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={askHint}
+                  disabled={pending}
+                >
+                  <Lightbulb className="size-4" aria-hidden />
+                  Socratic hint
+                </Button>
               </div>
-            ) : null}
+              {hint ? (
+                <p className="rounded-2xl border border-border bg-ink-sunken px-4 py-3 text-sm leading-relaxed">
+                  {hint}
+                </p>
+              ) : null}
 
-            {tab === "notes" ? (
-              <NotesEditor initial={notes} onChange={setNotes} />
-            ) : null}
-
-            {boardVisited ? (
-              <div className={cn(tab !== "board" && "hidden")}>
-                <DiagramCanvas
-                  initialElements={entry.diagram?.elements ?? null}
-                  initialAppState={entry.diagram?.appState ?? null}
-                  onChange={(els, state) => {
-                    diagram.current = { elements: els, appState: state };
-                    setDirty(true);
-                  }}
+              <Field
+                label="Trigger"
+                hint="The signal you noticed first — this is what Recall quizzes."
+                value={trigger}
+                onChange={setTrigger}
+                placeholder="sorted array + find a pair summing to target"
+              />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field
+                  label="Pattern"
+                  value={pattern}
+                  onChange={setPattern}
+                  placeholder="two pointers"
+                />
+                <Field
+                  label="Complexity"
+                  value={complexity}
+                  onChange={setComplexity}
+                  placeholder="O(n) time / O(1) space"
                 />
               </div>
-            ) : null}
+              <Field
+                label="Approach"
+                value={approach}
+                onChange={setApproach}
+                placeholder="One or two sentences — not the full code"
+                multiline
+              />
+              <Field
+                label="Pitfalls"
+                value={pitfalls}
+                onChange={setPitfalls}
+                placeholder="Off-by-one on the right bound…"
+                multiline
+              />
 
-            {tab === "code" ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label htmlFor="language" className="text-sm text-muted">
-                    Language
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <label htmlFor="confidence" className="text-sm text-muted">
+                    Confidence
                   </label>
-                  <select
-                    id="language"
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    className="h-9 cursor-pointer rounded-lg border border-border bg-ink-sunken px-2 font-data text-xs"
-                  >
-                    <option value="typescript">TypeScript</option>
-                    <option value="javascript">JavaScript</option>
-                    <option value="python">Python</option>
-                    <option value="java">Java</option>
-                    <option value="cpp">C++</option>
-                  </select>
+                  <span className="font-data text-sm" data-numeric>
+                    {confidence}/5
+                  </span>
                 </div>
-                <SolutionEditor
-                  value={solution}
-                  language={language}
-                  onChange={setSolution}
+                <input
+                  id="confidence"
+                  type="range"
+                  min={1}
+                  max={5}
+                  value={confidence}
+                  onChange={(e) => setConfidence(Number(e.target.value))}
+                  className="w-full cursor-pointer accent-[var(--band-expert)]"
                 />
               </div>
-            ) : null}
-          </div>
-        </section>
+            </div>
+          </CollapsiblePanel>
+
+          <CollapsiblePanel
+            id="notes"
+            open={open.notes}
+            onOpenChange={(next) => setPanelOpen("notes", next)}
+            tall={tall.notes}
+            onToggleTall={() => toggleTall("notes")}
+          >
+            <NotesEditor
+              initial={notes}
+              onChange={setNotes}
+              minHeightClassName={
+                tall.notes ? "min-h-[560px]" : "min-h-[240px]"
+              }
+            />
+          </CollapsiblePanel>
+
+          <CollapsiblePanel
+            id="board"
+            open={open.board}
+            onOpenChange={(next) => setPanelOpen("board", next)}
+            tall={tall.board}
+            onToggleTall={() => toggleTall("board")}
+            keepMounted={boardVisited}
+          >
+            {boardVisited ? (
+              <DiagramCanvas
+                initialElements={entry.diagram?.elements ?? null}
+                initialAppState={entry.diagram?.appState ?? null}
+                heightClassName={tall.board ? "h-[640px]" : "h-[480px]"}
+                onChange={(els, state) => {
+                  diagram.current = { elements: els, appState: state };
+                  markDirty();
+                }}
+              />
+            ) : (
+              <div className="skeleton h-[420px] w-full rounded-2xl" />
+            )}
+          </CollapsiblePanel>
+
+          <CollapsiblePanel
+            id="code"
+            open={open.code}
+            onOpenChange={(next) => setPanelOpen("code", next)}
+            tall={tall.code}
+            onToggleTall={() => toggleTall("code")}
+          >
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label htmlFor="language" className="text-sm text-muted">
+                  Language
+                </label>
+                <select
+                  id="language"
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className="h-9 cursor-pointer rounded-lg border border-border bg-ink-sunken px-2 font-data text-xs"
+                >
+                  <option value="typescript">TypeScript</option>
+                  <option value="javascript">JavaScript</option>
+                  <option value="python">Python</option>
+                  <option value="java">Java</option>
+                  <option value="cpp">C++</option>
+                </select>
+              </div>
+              <SolutionEditor
+                value={solution}
+                language={language}
+                onChange={setSolution}
+                height={tall.code ? "560px" : "320px"}
+              />
+            </div>
+          </CollapsiblePanel>
+        </div>
       </div>
     </div>
+  );
+}
+
+function CollapsiblePanel({
+  id,
+  open,
+  onOpenChange,
+  tall,
+  onToggleTall,
+  keepMounted = false,
+  children,
+}: {
+  id: PanelId;
+  open: boolean;
+  onOpenChange: (next: boolean) => void;
+  tall?: boolean;
+  onToggleTall?: () => void;
+  keepMounted?: boolean;
+  children: ReactNode;
+}) {
+  const meta = PANEL_META[id];
+  const Icon = meta.icon;
+  const panelId = `panel-${id}`;
+  const showBody = open || keepMounted;
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="flex items-center gap-1 border-b border-border px-2 py-1.5">
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => onOpenChange(!open)}
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-left transition hover:bg-ink-sunken"
+        >
+          <Icon
+            className={cn("size-4 shrink-0", open && "text-band-expert")}
+            aria-hidden
+          />
+          <span className="truncate font-display text-base tracking-tight">
+            {meta.label}
+          </span>
+          <span className="ml-auto text-[10px] uppercase tracking-wide text-muted">
+            {open ? "expanded" : "compressed"}
+          </span>
+          <ChevronDown
+            className={cn(
+              "size-4 shrink-0 text-muted transition-transform",
+              open && "rotate-180",
+            )}
+            aria-hidden
+          />
+        </button>
+        {onToggleTall && open ? (
+          <button
+            type="button"
+            onClick={onToggleTall}
+            aria-pressed={tall}
+            title={tall ? "Compress height" : "Expand height"}
+            className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-muted transition hover:bg-ink-sunken hover:text-foreground"
+          >
+            {tall ? (
+              <Minimize2 className="size-4" aria-hidden />
+            ) : (
+              <Maximize2 className="size-4" aria-hidden />
+            )}
+            <span className="sr-only">
+              {tall ? "Compress panel height" : "Expand panel height"}
+            </span>
+          </button>
+        ) : null}
+      </div>
+      {showBody ? (
+        <div
+          id={panelId}
+          className={cn("p-5", !open && "hidden")}
+          aria-hidden={!open}
+        >
+          {children}
+        </div>
+      ) : null}
+    </section>
   );
 }
 

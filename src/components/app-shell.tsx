@@ -3,8 +3,8 @@ import {
   BookOpen,
   Brain,
   LayoutDashboard,
-  Link2,
   Settings,
+  Sparkles,
   UserRound,
 } from "lucide-react";
 import { getSession } from "@/lib/session";
@@ -14,17 +14,29 @@ import { CommandPalette } from "@/components/command-palette";
 import { KeepSolvedLogo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 
-const appLinks = [
-  { href: "/recall", label: "Recall", icon: Brain },
-  { href: "/journal", label: "Journal", icon: BookOpen },
-  { href: "/dashboard", label: "Profile", icon: LayoutDashboard },
-  { href: "/dashboard/platforms", label: "Platforms", icon: Link2 },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
-];
+type NavLink = {
+  href: string;
+  label: string;
+  icon: typeof Brain;
+};
 
-const mobileLinks = appLinks.filter((l) =>
-  ["/recall", "/journal", "/dashboard", "/dashboard/platforms"].includes(l.href),
-);
+function buildAppLinks(entryCount: number): NavLink[] {
+  const core: NavLink[] = [
+    { href: "/recall", label: "Recall", icon: Brain },
+    { href: "/journal", label: "Journal", icon: BookOpen },
+    { href: "/dashboard", label: "Profile", icon: LayoutDashboard },
+    { href: "/dashboard/settings", label: "Settings", icon: Settings },
+  ];
+  // New users: put the first action first so they don't hunt for it.
+  if (entryCount === 0) {
+    return [
+      { href: "/try", label: "Start", icon: Sparkles },
+      ...core.filter((l) => l.href !== "/dashboard/settings"),
+      { href: "/dashboard/settings", label: "Settings", icon: Settings },
+    ];
+  }
+  return core;
+}
 
 export async function AppShell({
   children,
@@ -56,12 +68,26 @@ export async function AppShell({
     }
   }
 
+  const appLinks = buildAppLinks(entryCount);
+  const mobileLinks = appLinks
+    .filter((l) =>
+      ["/try", "/recall", "/journal", "/dashboard"].includes(l.href)
+    )
+    .slice(0, 4);
+
+  const primaryCta =
+    entryCount === 0
+      ? { href: "/try", label: "Add a problem" }
+      : dueCount > 0
+        ? { href: "/recall", label: `Review ${dueCount} due` }
+        : null;
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 border-b border-border bg-background/75 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4">
           <Link
-            href="/"
+            href={session && !marketing ? "/start" : "/"}
             className="transition-opacity hover:opacity-80"
             aria-label="KeepSolved home"
           >
@@ -74,7 +100,10 @@ export async function AppShell({
                 const Icon = l.icon;
                 const isActive =
                   active === l.href ||
-                  (l.href !== "/dashboard" && active?.startsWith(l.href));
+                  (l.href === "/try" && active === "/try") ||
+                  (l.href !== "/dashboard" &&
+                    l.href !== "/try" &&
+                    active?.startsWith(l.href));
                 return (
                   <Link
                     key={l.href}
@@ -102,12 +131,12 @@ export async function AppShell({
               <Link href="/try" className="transition hover:text-foreground">
                 Try instantly
               </Link>
-              <a
+              <Link
                 href="/#how-it-works"
                 className="transition hover:text-foreground"
               >
                 How it works
-              </a>
+              </Link>
               <Link href="/status" className="transition hover:text-foreground">
                 Status
               </Link>
@@ -115,6 +144,14 @@ export async function AppShell({
           )}
 
           <div className="flex items-center gap-2 sm:gap-3">
+            {session && !marketing && primaryCta ? (
+              <Link
+                href={primaryCta.href}
+                className="btn btn-primary hidden h-9 px-4 text-sm sm:inline-flex"
+              >
+                {primaryCta.label}
+              </Link>
+            ) : null}
             {session && !marketing ? <CommandPalette /> : null}
             <ThemeToggle />
             {session ? (
@@ -147,18 +184,17 @@ export async function AppShell({
 
         {session && entryCount === 0 && !marketing ? (
           <div className="border-t border-border bg-ink-sunken/80">
-            <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2 text-xs">
+            <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2.5 text-sm">
               <p className="text-muted">
-                <span className="font-data text-band-expert">Start here</span>
-                {" — "}
-                Load a problem, capture the pattern trigger, then let Recall
-                schedule you.
+                <span className="font-medium text-foreground">How it works:</span>
+                {" "}
+                Pick a problem → Write what triggers the pattern → Practice recall.
               </p>
               <Link
                 href="/try"
-                className="shrink-0 font-medium text-foreground underline-offset-2 hover:underline"
+                className="shrink-0 font-medium text-band-expert underline-offset-2 hover:underline"
               >
-                Try a problem
+                Start here
               </Link>
             </div>
           </div>
@@ -182,7 +218,9 @@ export async function AppShell({
               const Icon = l.icon;
               const isActive =
                 active === l.href ||
-                (l.href !== "/dashboard" && active?.startsWith(l.href));
+                (l.href !== "/dashboard" &&
+                  l.href !== "/try" &&
+                  active?.startsWith(l.href));
               return (
                 <li key={l.href}>
                   <Link
